@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ContractWatch.Cli/ContractWatch.Cli.csproj" />
+    <Project Path="src/ContractWatch.Core/ContractWatch.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ContractWatch.Core.Tests/ContractWatch.Core.Tests.csproj" />
+  </Folder>
+</Solution>
