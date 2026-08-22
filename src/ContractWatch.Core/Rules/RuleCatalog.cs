@@ -14,10 +14,13 @@ public static class RuleCatalog
         new ResponsePropertyTypeChanged(),
         new ResponsePropertyRemoved(),
         new ResponseEnumWidened(),
+        new RequiredResponsePropertyAdded(),
+        new NullableRemoved(),
         new EndpointAdded(),
         new OptionalParameterAdded(),
         new OptionalPropertyAdded(),
         new RequestEnumWidened(),
         new ResponseStatusAdded(),
+        new MetadataOnlyChanged(),
     ];
 }
