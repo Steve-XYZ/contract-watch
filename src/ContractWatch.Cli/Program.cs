@@ -5,7 +5,7 @@ using ContractWatch.Core.Parsing;
 using ContractWatch.Core.Reporting;
 
 var formatOption = new Option<string>("--format") { DefaultValueFactory = _ => "console" };
-var failOnOption = new Option<string>("--fail-on") { DefaultValueFactory = _ => "breaking" };
+var failOnOption = new Option<string?>("--fail-on") { DefaultValueFactory = _ => null };
 var suppressFileOption = new Option<string?>("--suppress-file");
 
 var oldArgument = new Argument<FileInfo>("old");
@@ -29,23 +29,34 @@ checkCommand.Add(suppressFileOption);
 
 string? ValidateFormat(string format)
 {
-    if (format is "console" or "json" or "markdown")
+    if (format is "console" or "json" or "markdown" or "sarif")
         return null;
 
-    return $"--format desconocido '{format}' (console|json|markdown)";
+    return $"--format desconocido '{format}' (console|json|markdown|sarif)";
 }
 
-string? ValidateFailOn(string failOn)
+string? ValidateFailOn(string? failOn)
 {
-    if (failOn is "breaking" or "potentially" or "never")
+    if (failOn is null or "breaking" or "potentially" or "never")
         return null;
 
     return $"--fail-on desconocido '{failOn}' (breaking|potentially|never)";
 }
 
-async Task<int> ReportAndExit(ParseResult parseResult, ApiContract previous, ApiContract current, string failOn, string format, string? suppressFile)
+async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string? failOn, string artifactUri, string format, string? suppressFile)
 {
     var original = new ContractComparer().Compare(previous, current);
+
+    ContractPolicy policy;
+    try
+    {
+        policy = PolicyFile.LoadOrDefault(null);
+    }
+    catch (PolicyFileException ex)
+    {
+        Console.Error.WriteLine($"error: {ex.Message}");
+        return 2;
+    }
 
     IReadOnlyList<Suppression> suppressions;
     try
@@ -58,27 +69,21 @@ async Task<int> ReportAndExit(ParseResult parseResult, ApiContract previous, Api
         return 2;
     }
 
-    var result = SuppressionFile.Apply(original, suppressions);
+    var result = SuppressionFile.Apply(PolicyFile.Apply(original, policy), suppressions);
     var suppressed = SuppressionFile.CountSuppressed(original, result);
 
     Console.Out.WriteLine(format switch
     {
         "json" => JsonReporter.Render(result),
         "markdown" => MarkdownReporter.Render(result),
+        "sarif" => SarifReporter.Render(result, artifactUri),
         _ => ConsoleReporter.Render(result.Changes),
     });
 
-    if (suppressed > 0 && format != "json")
+    if (suppressed > 0 && format is not ("json" or "sarif"))
         Console.Out.WriteLine($"{suppressed} cambio(s) suprimido(s) según {suppressFile ?? SuppressionFile.DefaultFileName}");
 
-    ChangeSeverity? threshold = failOn switch
-    {
-        "breaking" => ChangeSeverity.Breaking,
-        "potentially" => ChangeSeverity.PotentiallyBreaking,
-        _ => null,
-    };
-
-    return result.FailsAt(threshold) ? 1 : 0;
+    return result.FailsAt(PolicyFile.ResolveThreshold(failOn, policy.FailOn)) ? 1 : 0;
 }
 
 compareCommand.SetAction(async (parseResult, cancellationToken) =>
@@ -117,7 +122,7 @@ compareCommand.SetAction(async (parseResult, cancellationToken) =>
     {
         var previous = await OpenApiLoader.LoadAsync(oldFile.FullName, cancellationToken);
         var current = await OpenApiLoader.LoadAsync(newFile.FullName, cancellationToken);
-        return await ReportAndExit(parseResult, previous, current, failOn, format, parseResult.GetValue(suppressFileOption));
+        return await ReportAndExit(previous, current, failOn, newFile.FullName, format, parseResult.GetValue(suppressFileOption));
     }
     catch (Exception ex) when (ex is ContractLoadException or IOException or UnauthorizedAccessException)
     {
@@ -155,7 +160,7 @@ checkCommand.SetAction(async (parseResult, cancellationToken) =>
     {
         var baseline = await GitSpecSource.LoadAsync(gitRef, specPath, cancellationToken);
         var current = await OpenApiLoader.LoadAsync(specPath, cancellationToken);
-        return await ReportAndExit(parseResult, baseline, current, failOn, format, parseResult.GetValue(suppressFileOption));
+        return await ReportAndExit(baseline, current, failOn, specPath, format, parseResult.GetValue(suppressFileOption));
     }
     catch (Exception ex) when (ex is GitSpecException or ContractLoadException or IOException or UnauthorizedAccessException)
     {
