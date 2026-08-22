@@ -30,6 +30,8 @@ checkCommand.Add(failOnOption);
 checkCommand.Add(suppressFileOption);
 checkCommand.Add(consumersOption);
 
+var initCommand = new Command("init", "Crea los archivos de configuración (.contractwatch.json, .contractwatchignore, consumers.json) sin sobreescribir los existentes");
+
 string? ValidateFormat(string format)
 {
     if (format is "console" or "json" or "markdown" or "sarif")
@@ -190,8 +192,41 @@ checkCommand.SetAction(async (parseResult, cancellationToken) =>
     }
 });
 
+initCommand.SetAction(_ =>
+{
+    try
+    {
+        var results = ContractWatchInit.Init(Directory.GetCurrentDirectory());
+        var created = 0;
+        var exists = 0;
+
+        foreach (var result in results)
+        {
+            if (result.Status == "created")
+            {
+                created++;
+                Console.Out.WriteLine($"✓ creado  {result.FileName}");
+            }
+            else
+            {
+                exists++;
+                Console.Out.WriteLine($"- ya existe  {result.FileName}");
+            }
+        }
+
+        Console.Out.WriteLine($"Listo. {created} creado(s), {exists} existente(s).");
+        return 0;
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+        Console.Error.WriteLine($"error: {ex.Message}");
+        return 2;
+    }
+});
+
 var rootCommand = new RootCommand("ContractWatch: detecta cambios que rompen consumidores de tu API");
 rootCommand.Add(compareCommand);
 rootCommand.Add(checkCommand);
+rootCommand.Add(initCommand);
 
 return await rootCommand.Parse(args).InvokeAsync();
