@@ -171,6 +171,23 @@ contractwatch check --baseline origin/main openapi.json
 contractwatch check --baseline HEAD examples/v1.json --format markdown
 ```
 
+## init — scaffolding de configuración
+
+```
+contractwatch init
+```
+
+Crea en el directorio actual los tres archivos de configuración que `compare` y `check` auto-detectan: `.contractwatch.json`, `.contractwatchignore` y `consumers.json`, cada uno con una plantilla mínima válida e inerte (no cambia el comportamiento de la herramienta). Nunca sobreescribe: un archivo que ya existe se reporta como existente y se preserva intacto; no hay `--force`.
+
+```
+✓ creado  .contractwatch.json
+- ya existe  .contractwatchignore
+✓ creado  consumers.json
+Listo. 2 creado(s), 1 existente(s).
+```
+
+Errores de I/O → exit 2 con el mensaje en stderr; caso normal exit 0.
+
 ## Supresiones (`.contractwatchignore`)
 
 Archivo por repo, auto-detectado en el directorio de trabajo para `compare` y `check` (`--suppress-file` lo sobreescribe). Una supresión por línea:

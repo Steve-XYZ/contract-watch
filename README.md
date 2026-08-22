@@ -72,6 +72,7 @@ dotnet tool install -g --add-source artifacts contractwatch
 Con el tool instalado:
 
 ```bash
+contractwatch init    # scaffolding opcional: crea .contractwatch.json, .contractwatchignore y consumers.json (nunca sobreescribe)
 contractwatch --help
 contractwatch compare openapi-v1.json openapi-v2.json
 ```
