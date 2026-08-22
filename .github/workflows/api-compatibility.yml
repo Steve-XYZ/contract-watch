@@ -13,6 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
 
       - name: Green path (policies fixtures, warnings no bloquean)
         uses: ./
@@ -36,3 +43,9 @@ jobs:
         run: |
           echo "::error::El camino rojo (v1 → v2) terminó en éxito; se esperaba exit 1 por breaking changes"
           exit 1
+
+      - name: Gate de CI — check --baseline origin/main (policies-v1 sin cambios → PASSED)
+        run: |
+          dotnet build src/ContractWatch.Cli -c Release --nologo -v quiet
+          dotnet run --project src/ContractWatch.Cli -c Release --no-build -- \
+            check --baseline origin/main examples/policies-v1.json

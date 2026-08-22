@@ -1,6 +1,8 @@
 # CLI
 
-## Comando único del MVP
+## Comandos
+
+### compare
 
 ```
 contractwatch compare <old.json> <new.json> [options]
@@ -100,6 +102,34 @@ contractwatch compare examples/v1.json examples/v2.json
 contractwatch compare main/openapi.json pr/openapi.json --format json
 contractwatch compare old.json new.json --fail-on potentially   # CI estricto
 ```
+
+## check — gate de CI
+
+```
+contractwatch check --baseline <git-ref> <spec-path> [options]
+```
+
+Resuelve la versión base del spec vía `git show <ref>:<spec-path>` (sin checkout) y la compara contra el archivo del árbol de trabajo, en la misma ruta relativa. Comparte `--format`, `--fail-on` y suppressions con `compare`; mismos exit codes. Fallos de git (ref inexistente, archivo ausente en el ref) → exit 2.
+
+```
+contractwatch check --baseline origin/main openapi.json
+contractwatch check --baseline HEAD examples/v1.json --format markdown
+```
+
+## Supresiones (`.contractwatchignore`)
+
+Archivo por repo, auto-detectado en el directorio de trabajo para `compare` y `check` (`--suppress-file` lo sobreescribe). Una supresión por línea:
+
+```
+# <ruleId> <path> [<method>] :: <razón obligatoria>
+CW001 /legacy/orders :: retirada planificada Q4
+CW003 /orders POST :: headers acordados con mobile (#42)
+```
+
+- Coincidencia exacta de ruleId y path; el method es opcional.
+- La razón es obligatoria: una supresión sin justificación es error de parsing (exit 2).
+- Los cambios suprimidos se excluyen del reporte y del cálculo del exit code; en console/markdown se imprime cuántos fueron suprimidos.
+- La revisabilidad vive en el diff: el PR que introduce o amplía el archivo muestra qué deja de bloquearse y por qué.
 
 ## Decisiones
 

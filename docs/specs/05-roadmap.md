@@ -32,13 +32,13 @@ Limitación conocida: en PRs de forks el GITHUB_TOKEN es read-only y el comentar
 
 Después, si hay tracción: GitHub App con checks por commit.
 
-## Fase 3 — Gate de CI
+## Fase 3 — Gate de CI ✅
 
 ```
-contractwatch check --baseline origin/main
+contractwatch check --baseline origin/main <spec>
 ```
 
-Resuelve el spec de la rama base vía git y aplica exit codes (`04-cli.md`). Suppressions justificadas por archivo (`.contractwatchignore`): ruleId + path + razón, revisables en el PR que las introduce.
+Implementado: `check` resuelve el spec de la rama base vía `git show` (sin checkout intermedio) y aplica los exit codes del CLI. Suppressions en `.contractwatchignore` con formato `<ruleId> <path> [<method>] :: <razón>` — la justificación es obligatoria y el archivo se auto-detecta; la revisabilidad vive en el diff del PR que lo introduce.
 
 ## Fase 4 — Políticas y formatos
 
