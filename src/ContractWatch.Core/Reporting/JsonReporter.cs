@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ContractWatch.Core.Comparison;
@@ -7,7 +8,21 @@ namespace ContractWatch.Core.Reporting;
 
 public static class JsonReporter
 {
-    public const string ToolVersion = "0.1.0";
+    public static string ToolVersion { get; } = DeriveToolVersion();
+
+    private static string DeriveToolVersion()
+    {
+        var assembly = typeof(JsonReporter).Assembly;
+        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+        if (string.IsNullOrEmpty(informational))
+        {
+            return assembly.GetName().Version!.ToString(3);
+        }
+
+        var metadataSeparator = informational.IndexOf('+');
+        return metadataSeparator < 0 ? informational : informational[..metadataSeparator];
+    }
 
     private static readonly JsonSerializerOptions Options = new()
     {

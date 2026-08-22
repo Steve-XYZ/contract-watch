@@ -49,6 +49,35 @@ jobs:
 
 El action comenta el veredicto en el PR (idempotente) y falla si hay cambios breaking.
 
+## Instalación
+
+### Desde un GitHub Release
+
+Descarga `ContractWatch.<versión>.nupkg` de un [release](https://github.com/Steve-XYZ/contract-watch/releases) e instala como tool global de .NET:
+
+```bash
+dotnet tool install -g --add-source <carpeta-con-el-nupkg> contractwatch
+```
+
+El paquete es autocontenido (no necesita fuentes adicionales). Requiere .NET 10 SDK/runtime.
+
+### Build local
+
+```bash
+git clone https://github.com/Steve-XYZ/contract-watch && cd contract-watch
+dotnet pack -c Release -o artifacts
+dotnet tool install -g --add-source artifacts contractwatch
+```
+
+Con el tool instalado:
+
+```bash
+contractwatch --help
+contractwatch compare openapi-v1.json openapi-v2.json
+```
+
+Para actualizar a una nueva versión: `dotnet tool update -g --add-source <carpeta> contractwatch`; para desinstalar: `dotnet tool uninstall -g contractwatch`.
+
 ## Estado
 
-Fases 1–3 completas: CLI con las 18 reglas del catálogo (`compare` + `check --baseline`, formatos console/json/markdown/sarif, exit codes), GitHub Action con comentario idempotente en PRs y gate de CI con suppressions justificadas (`.contractwatchignore`). Fase 4 parcial: policies por repo (`.contractwatch.json` con `failOn` y `severityOverrides`) y salida SARIF (`--format sarif`). Fase 5 MVP: análisis de impacto declarativo (`consumers.json`) que responde *¿quién se rompe?* con confianza alta/media por consumidor. Sin BD ni grafo multi-API; los demás formatos de contrato quedan para después.
+Fases 1–3 completas: CLI con las 18 reglas del catálogo (`compare` + `check --baseline`, formatos console/json/markdown/sarif, exit codes), GitHub Action con comentario idempotente en PRs y gate de CI con suppressions justificadas (`.contractwatchignore`). Fase 4 parcial: policies por repo (`.contractwatch.json` con `failOn` y `severityOverrides`) y salida SARIF (`--format sarif`). Fase 5 MVP: análisis de impacto declarativo (`consumers.json`) que responde *¿quién se rompe?* con confianza alta/media por consumidor. Empaquetado como .NET global tool (`dotnet tool install contractwatch`, paquete autocontenido con versión única desde MSBuild) y release automático por tags `v*` que adjunta los nupkg a un GitHub Release; la publicación en NuGet.org queda pendiente. Sin BD ni grafo multi-API; los demás formatos de contrato quedan para después.
