@@ -51,4 +51,4 @@ El action comenta el veredicto en el PR (idempotente) y falla si hay cambios bre
 
 ## Estado
 
-Fase 1 y Fase 2 completas: CLI con las 18 reglas del catálogo (`compare`, formatos console/json/markdown) + GitHub Action con comentario idempotente en PRs. Sin BD; GitHub App con checks queda para después.
+Fases 1–3 completas: CLI con las 18 reglas del catálogo (`compare` + `check --baseline`, formatos console/json/markdown, exit codes), GitHub Action con comentario idempotente en PRs y gate de CI con suppressions justificadas (`.contractwatchignore`). Sin BD; policies por repo y "¿quién se rompe?" quedan para después.
