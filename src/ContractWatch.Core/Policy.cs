@@ -75,14 +75,9 @@ public static class PolicyFile
         var remapped = result.Changes
             .Select(change => policy.SeverityOverrides.TryGetValue(change.RuleId, out var severity)
                 ? change with { Severity = severity }
-                : change)
-            .OrderByDescending(c => c.Severity)
-            .ThenBy(c => c.Location.Path, StringComparer.Ordinal)
-            .ThenBy(c => c.Location.Method ?? string.Empty, StringComparer.Ordinal)
-            .ThenBy(c => c.RuleId, StringComparer.Ordinal)
-            .ToList();
+                : change);
 
-        return new ComparisonResult(remapped);
+        return new ComparisonResult(ComparisonOrdering.Apply(remapped));
     }
 
     private static ContractPolicy Empty { get; } = new(null, new Dictionary<string, ChangeSeverity>());
@@ -105,7 +100,7 @@ public static class PolicyFile
         foreach (var (ruleId, value) in overrides)
         {
             if (!KnownRuleIds.Contains(ruleId))
-                throw new PolicyFileException(path, $"regla desconocida '{ruleId}' en severityOverrides (se esperan CW001..CW018)");
+                throw new PolicyFileException(path, $"regla desconocida '{ruleId}' en severityOverrides (se esperan {KnownRuleIds.Min()}..{KnownRuleIds.Max()})");
 
             var severity = value switch
             {

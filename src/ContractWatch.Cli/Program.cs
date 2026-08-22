@@ -122,7 +122,7 @@ compareCommand.SetAction(async (parseResult, cancellationToken) =>
     {
         var previous = await OpenApiLoader.LoadAsync(oldFile.FullName, cancellationToken);
         var current = await OpenApiLoader.LoadAsync(newFile.FullName, cancellationToken);
-        return await ReportAndExit(previous, current, failOn, newFile.FullName, format, parseResult.GetValue(suppressFileOption));
+        return await ReportAndExit(previous, current, failOn, SarifReporter.NormalizeArtifactUri(newFile.FullName), format, parseResult.GetValue(suppressFileOption));
     }
     catch (Exception ex) when (ex is ContractLoadException or IOException or UnauthorizedAccessException)
     {
@@ -160,7 +160,7 @@ checkCommand.SetAction(async (parseResult, cancellationToken) =>
     {
         var baseline = await GitSpecSource.LoadAsync(gitRef, specPath, cancellationToken);
         var current = await OpenApiLoader.LoadAsync(specPath, cancellationToken);
-        return await ReportAndExit(baseline, current, failOn, specPath, format, parseResult.GetValue(suppressFileOption));
+        return await ReportAndExit(baseline, current, failOn, SarifReporter.NormalizeArtifactUri(Path.GetFullPath(specPath)), format, parseResult.GetValue(suppressFileOption));
     }
     catch (Exception ex) when (ex is GitSpecException or ContractLoadException or IOException or UnauthorizedAccessException)
     {

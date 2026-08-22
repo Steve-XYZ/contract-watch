@@ -114,3 +114,26 @@ public class SarifReporterTests
             new ChangeLocation("/orders", "POST"), "Optional property added: metadata"),
     ]);
 }
+
+public class SarifArtifactUriTests
+{
+    [Fact]
+    public void Ruta_bajo_el_directorio_actual_se_vuelve_relativa()
+    {
+        var absolute = Path.Combine(Environment.CurrentDirectory, "specs", "openapi.json");
+
+        var uri = SarifReporter.NormalizeArtifactUri(absolute);
+
+        Assert.False(Path.IsPathRooted(uri));
+        Assert.Equal(Path.Join("specs", "openapi.json"), uri);
+    }
+
+    [Fact]
+    public void Ruta_fuera_del_directorio_actual_no_queda_absoluta()
+    {
+        var uri = SarifReporter.NormalizeArtifactUri(Path.Combine(Path.GetTempPath(), "otro.json"));
+
+        Assert.False(Path.IsPathRooted(uri));
+        Assert.StartsWith("..", uri);
+    }
+}

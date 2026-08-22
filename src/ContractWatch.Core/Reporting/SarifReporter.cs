@@ -12,6 +12,9 @@ public static class SarifReporter
         WriteIndented = true,
     };
 
+    public static string NormalizeArtifactUri(string path) =>
+        Path.GetRelativePath(Environment.CurrentDirectory, path);
+
     public static string Render(ComparisonResult result, string artifactUri)
     {
         var findings = result.Changes
