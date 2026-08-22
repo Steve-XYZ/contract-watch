@@ -157,6 +157,9 @@ public static class ImpactAnalyzer
         if (!string.Equals(path, location.Path, StringComparison.Ordinal))
             return false;
 
+        if (location.Method is null)
+            return true;
+
         return method is null or "*" || string.Equals(method, location.Method, StringComparison.OrdinalIgnoreCase);
     }
 

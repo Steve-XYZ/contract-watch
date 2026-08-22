@@ -60,6 +60,28 @@ public class ConsumerImpactTests
     }
 
     [Fact]
+    public void Cambio_a_nivel_de_path_afecta_a_consumidores_declarados_con_metodo()
+    {
+        var result = new ComparisonResult([Change("CW001", ChangeSeverity.Breaking, "/legacy/orders")]);
+        var registry = Registry(new ConsumerEntry("admin-web", ["GET /legacy/orders"]));
+
+        var impact = ImpactAnalyzer.Analyze(result, registry);
+
+        var consumer = Assert.Single(impact);
+        Assert.Equal(ConfidenceLevel.High, consumer.Confidence);
+        Assert.Equal(1, consumer.Changes);
+    }
+
+    [Fact]
+    public void Cambio_a_nivel_de_path_no_cruza_hacia_otros_paths()
+    {
+        var result = new ComparisonResult([Change("CW001", ChangeSeverity.Breaking, "/legacy/orders")]);
+        var registry = Registry(new ConsumerEntry("admin-web", ["GET /orders"]));
+
+        Assert.Empty(ImpactAnalyzer.Analyze(result, registry));
+    }
+
+    [Fact]
     public void Path_distinto_no_afecta_al_consumidor()
     {
         var result = new ComparisonResult([Change("CW001", ChangeSeverity.Breaking, "/refunds", "GET")]);

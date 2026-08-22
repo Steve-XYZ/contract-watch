@@ -226,7 +226,7 @@ Cada operación es `"METHOD /path"` o `"/path"` (también vale `"* /path"`). El 
 | `POST /orders` | método + path exactos (método sin distinción de mayúsculas) | **high** |
 | `/orders` o `* /orders` | solo path, cualquier método | **medium** |
 
-- Un cambio afecta a un consumidor si su path coincide exactamente con el de una entrada y (la entrada no declara método, o es `*`, o el método coincide).
+- Un cambio afecta a un consumidor si su path coincide exactamente con el de una entrada y (la entrada no declara método, o es `*`, o el método coincide). Los cambios a nivel de path — sin método, como la eliminación de un endpoint — afectan a todas las entradas de ese path, incluidas las que declaran método.
 - Solo cuentan cambios `Breaking` y `PotentiallyBreaking`: los `Compatible` no impactan a nadie.
 - Si varias entradas del mismo consumidor coinciden con grados distintos, prevalece `high`; cada cambio se cuenta una sola vez por consumidor.
 - La lista sale ordenada por confianza descendente y luego servicio; sin duplicados.
