@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.Globalization;
 using ContractWatch.Core;
 using ContractWatch.Core.Comparison;
 using ContractWatch.Core.Parsing;
@@ -8,6 +9,7 @@ var formatOption = new Option<string>("--format") { DefaultValueFactory = _ => "
 var failOnOption = new Option<string?>("--fail-on") { DefaultValueFactory = _ => null };
 var suppressFileOption = new Option<string?>("--suppress-file");
 var consumersOption = new Option<string?>("--consumers");
+var saveOption = new Option<string?>("--save");
 
 var oldArgument = new Argument<FileInfo>("old");
 var newArgument = new Argument<FileInfo>("new");
@@ -21,6 +23,7 @@ compareCommand.Add(formatOption);
 compareCommand.Add(failOnOption);
 compareCommand.Add(suppressFileOption);
 compareCommand.Add(consumersOption);
+compareCommand.Add(saveOption);
 
 var checkCommand = new Command("check", "Compara el contrato del árbol de trabajo contra el spec en un ref de git (gate de CI)");
 checkCommand.Add(baselineOption);
@@ -29,8 +32,18 @@ checkCommand.Add(formatOption);
 checkCommand.Add(failOnOption);
 checkCommand.Add(suppressFileOption);
 checkCommand.Add(consumersOption);
+checkCommand.Add(saveOption);
 
 var initCommand = new Command("init", "Crea los archivos de configuración (.contractwatch.json, .contractwatchignore, consumers.json) sin sobreescribir los existentes");
+
+var historyDirOption = new Option<string>("--dir") { DefaultValueFactory = _ => "reports" };
+var historyLimitOption = new Option<int>("--limit") { DefaultValueFactory = _ => 20 };
+var historyShowOption = new Option<string?>("--show");
+
+var historyCommand = new Command("history", "Lista y consulta los reportes guardados localmente con --save");
+historyCommand.Add(historyDirOption);
+historyCommand.Add(historyLimitOption);
+historyCommand.Add(historyShowOption);
 
 string? ValidateFormat(string format)
 {
@@ -48,7 +61,7 @@ string? ValidateFailOn(string? failOn)
     return $"--fail-on desconocido '{failOn}' (breaking|potentially|never)";
 }
 
-async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string? failOn, string artifactUri, string format, string? suppressFile, string? consumersFile)
+async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string? failOn, string artifactUri, string format, string? suppressFile, string? consumersFile, string commandKind, IReadOnlyList<string> inputs, string? saveDirectory)
 {
     var original = new ContractComparer().Compare(previous, current);
 
@@ -101,6 +114,27 @@ async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string?
     if (suppressed > 0 && format is not ("json" or "sarif"))
         Console.Out.WriteLine($"{suppressed} cambio(s) suprimido(s) según {suppressFile ?? SuppressionFile.DefaultFileName}");
 
+    if (saveDirectory is not null)
+    {
+        var savedAt = DateTime.UtcNow;
+        var json = JsonReporter.Render(result, impact, new ReportMeta(savedAt.ToString("o"), commandKind, inputs));
+
+        try
+        {
+            var path = HistoryStore.Save(saveDirectory, json, commandKind, savedAt);
+            var line = $"Reporte guardado en {path}";
+
+            if (format is "json" or "sarif")
+                Console.Error.WriteLine(line);
+            else
+                Console.Out.WriteLine(line);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine($"aviso: no se pudo guardar el reporte ({ex.Message})");
+        }
+    }
+
     return result.FailsAt(PolicyFile.ResolveThreshold(failOn, policy.FailOn)) ? 1 : 0;
 }
 
@@ -140,7 +174,7 @@ compareCommand.SetAction(async (parseResult, cancellationToken) =>
     {
         var previous = await OpenApiLoader.LoadAsync(oldFile.FullName, cancellationToken);
         var current = await OpenApiLoader.LoadAsync(newFile.FullName, cancellationToken);
-        return await ReportAndExit(previous, current, failOn, SarifReporter.NormalizeArtifactUri(newFile.FullName), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption));
+        return await ReportAndExit(previous, current, failOn, SarifReporter.NormalizeArtifactUri(newFile.FullName), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "compare", [oldFile.FullName, newFile.FullName], parseResult.GetValue(saveOption));
     }
     catch (Exception ex) when (ex is ContractLoadException or IOException or UnauthorizedAccessException)
     {
@@ -178,7 +212,7 @@ checkCommand.SetAction(async (parseResult, cancellationToken) =>
     {
         var baseline = await GitSpecSource.LoadAsync(gitRef, specPath, cancellationToken);
         var current = await OpenApiLoader.LoadAsync(specPath, cancellationToken);
-        return await ReportAndExit(baseline, current, failOn, SarifReporter.NormalizeArtifactUri(Path.GetFullPath(specPath)), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption));
+        return await ReportAndExit(baseline, current, failOn, SarifReporter.NormalizeArtifactUri(Path.GetFullPath(specPath)), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "check", [gitRef, specPath], parseResult.GetValue(saveOption));
     }
     catch (Exception ex) when (ex is GitSpecException or ContractLoadException or IOException or UnauthorizedAccessException)
     {
@@ -224,9 +258,70 @@ initCommand.SetAction(_ =>
     }
 });
 
+historyCommand.SetAction(parseResult =>
+{
+    var directory = parseResult.GetValue(historyDirOption)!;
+    var limit = parseResult.GetValue(historyLimitOption)!;
+    var show = parseResult.GetValue(historyShowOption);
+
+    try
+    {
+        if (show is not null)
+        {
+            var showPath = show;
+
+            if (!Path.IsPathRooted(showPath) && !File.Exists(showPath))
+                showPath = Path.Combine(directory, showPath);
+
+            var content = HistoryStore.Read(showPath);
+            Console.Out.Write(content);
+
+            if (!content.EndsWith('\n'))
+                Console.Out.WriteLine();
+
+            return 0;
+        }
+
+        foreach (var entry in HistoryStore.List(directory, limit))
+        {
+            if (!entry.IsLegible)
+            {
+                Console.Out.WriteLine($"— {entry.FileName}: ilegible, omitido");
+                continue;
+            }
+
+            Console.Out.WriteLine(FormatEntry(entry));
+        }
+
+        return 0;
+    }
+    catch (HistoryException ex)
+    {
+        Console.Error.WriteLine($"error: {ex.Message}");
+        return 2;
+    }
+});
+
+static string FormatEntry(HistoryEntry entry)
+{
+    var savedAt = entry.Meta?.SavedAt is { } savedAtValue && DateTime.TryParse(savedAtValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
+        ? parsed.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture)
+        : "—";
+    var command = entry.Meta?.Command ?? "—";
+
+    if (entry.Summary is not { } summary)
+        return $"{savedAt}  {command}  —  —  {entry.FileName}";
+
+    var verdict = summary.Breaking > 0 ? "FAILED" : summary.PotentiallyBreaking > 0 ? "WARNING" : "PASSED";
+    var counts = $"{summary.Breaking} breaking · {summary.PotentiallyBreaking} potentially · {summary.Compatible} compatible";
+
+    return $"{savedAt}  {command}  {verdict}  {counts}  {entry.FileName}";
+}
+
 var rootCommand = new RootCommand("ContractWatch: detecta cambios que rompen consumidores de tu API");
 rootCommand.Add(compareCommand);
 rootCommand.Add(checkCommand);
 rootCommand.Add(initCommand);
+rootCommand.Add(historyCommand);
 
 return await rootCommand.Parse(args).InvokeAsync();
