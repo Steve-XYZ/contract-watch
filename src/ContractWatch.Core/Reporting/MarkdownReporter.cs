@@ -21,8 +21,8 @@ public static class MarkdownReporter
                 ? $"This PR introduces **{breaking} breaking** contract changes."
                 : "No breaking contract changes detected.",
             string.Empty,
-            "| Severity | Operation | Change | Rule |",
-            "|---|---|---|---|",
+            "| Severity | Operation | Change | Rule | Suggestion |",
+            "|---|---|---|---|---|",
         };
 
         foreach (var change in result.Changes)
@@ -36,8 +36,9 @@ public static class MarkdownReporter
             var target = change.Location.Method is null
                 ? $"`{Escape(change.Location.Path)}`"
                 : $"`{change.Location.Method} {Escape(change.Location.Path)}`";
+            var suggestion = change.Suggestion is null ? string.Empty : Escape(change.Suggestion);
 
-            lines.Add($"| {severity} | {target} | {Escape(change.Message)} | {change.RuleId} |");
+            lines.Add($"| {severity} | {target} | {Escape(change.Message)} | {change.RuleId} | {suggestion} |");
         }
 
         lines.Add(string.Empty);

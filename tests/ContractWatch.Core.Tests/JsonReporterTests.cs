@@ -53,4 +53,26 @@ public class JsonReporterTests
         Assert.Equal("PotentiallyBreaking", second.GetProperty("severity").GetString());
         Assert.Equal(JsonValueKind.Null, second.GetProperty("location").GetProperty("method").ValueKind);
     }
+
+    [Fact]
+    public void La_sugerencia_se_serializa_por_entrada_y_puede_ser_null()
+    {
+        var changes = new List<ContractChange>
+        {
+            new("CW004", "RequiredPropertyAdded", ChangeSeverity.Breaking,
+                new ChangeLocation("/orders", "POST"), "Required request property added: currency",
+                Suggestion: "Introduce the property as optional with a default value."),
+            new("CW015", "OptionalPropertyAdded", ChangeSeverity.Compatible,
+                new ChangeLocation("/orders", "POST"), "Optional property added: metadata"),
+        };
+        var result = new ComparisonResult(changes);
+
+        var json = JsonReporter.Render(result);
+        using var document = JsonDocument.Parse(json);
+
+        var entries = document.RootElement.GetProperty("changes");
+        Assert.Equal(JsonValueKind.String, entries[0].GetProperty("suggestion").ValueKind);
+        Assert.Contains("optional with a default", entries[0].GetProperty("suggestion").GetString());
+        Assert.Equal(JsonValueKind.Null, entries[1].GetProperty("suggestion").ValueKind);
+    }
 }

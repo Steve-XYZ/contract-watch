@@ -16,6 +16,9 @@ public static class ConsoleReporter
         {
             lines.Add(RenderHeader(change));
             lines.Add(RenderDetail(change));
+
+            if (change.Suggestion is { } suggestion)
+                lines.Add($"    ↳ {suggestion}");
         }
 
         if (ordered.Count > 0)

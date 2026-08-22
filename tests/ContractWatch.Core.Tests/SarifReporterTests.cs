@@ -104,6 +104,23 @@ public class SarifReporterTests
         Assert.Equal(JsonValueKind.Null, properties.GetProperty("method").ValueKind);
     }
 
+    [Fact]
+    public void Properties_incluye_la_sugerencia_del_cambio()
+    {
+        var result = new ComparisonResult(
+        [
+            new("CW003", "RequiredParameterAdded", ChangeSeverity.Breaking,
+                new ChangeLocation("/orders", "POST"), "Required parameter added: page",
+                Suggestion: "Introduce the parameter as optional with a server-side default."),
+        ]);
+
+        var json = SarifReporter.Render(result, "openapi.json");
+        using var document = JsonDocument.Parse(json);
+
+        var properties = document.RootElement.GetProperty("runs")[0].GetProperty("results")[0].GetProperty("properties");
+        Assert.Equal("Introduce the parameter as optional with a server-side default.", properties.GetProperty("suggestion").GetString());
+    }
+
     private static ComparisonResult Result() => new(
     [
         new("CW003", "RequiredParameterAdded", ChangeSeverity.Breaking,
