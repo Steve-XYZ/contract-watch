@@ -21,8 +21,8 @@ public class MarkdownReporterTests
 
         Assert.Contains("## API compatibility: FAILED", markdown);
         Assert.Contains("This PR introduces **1 breaking** contract changes.", markdown);
-        Assert.Contains("| ✗ Breaking | `POST /orders` | Required request property added: customerId | CW004 |", markdown);
-        Assert.Contains("| ✓ Compatible | `POST /orders` | Optional property added: metadata | CW015 |", markdown);
+        Assert.Contains("| ✗ Breaking | `POST /orders` | Required request property added: customerId | CW004 |  |", markdown);
+        Assert.Contains("| ✓ Compatible | `POST /orders` | Optional property added: metadata | CW015 |  |", markdown);
         Assert.EndsWith("1 breaking · 0 potentially breaking · 1 compatible", markdown);
     }
 
@@ -63,7 +63,22 @@ public class MarkdownReporterTests
 
         var markdown = MarkdownReporter.Render(result);
 
-        Assert.Contains("| ✗ Breaking | `/legacy/orders` | Endpoint removed | CW001 |", markdown);
+        Assert.Contains("| ✗ Breaking | `/legacy/orders` | Endpoint removed | CW001 |  |", markdown);
+    }
+
+    [Fact]
+    public void La_sugerencia_ocupa_la_ultima_columna_y_se_escapa()
+    {
+        var result = new ComparisonResult(
+        [
+            new("CW008", "ResponsePropertyTypeChanged", ChangeSeverity.Breaking,
+                new ChangeLocation("/x|y", "GET"), "Response property changed: a → b",
+                Suggestion: "Accept a|b and b."),
+        ]);
+
+        var markdown = MarkdownReporter.Render(result);
+
+        Assert.Contains("| ✗ Breaking | `GET /x\\|y` | Response property changed: a → b | CW008 | Accept a\\|b and b. |", markdown);
     }
 
     [Fact]

@@ -30,6 +30,7 @@ Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el 
 ```
 ✗ BREAKING POST /orders
   Required request property added: customerId        [CW004]
+    ↳ Introduce the property as optional with a default value and promote it to required only in a major version.
 
 ✗ BREAKING GET /orders/{id}
   Response property changed:
@@ -45,7 +46,7 @@ Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el 
 3 breaking · 1 potentially breaking · 7 compatible
 ```
 
-Orden de reporte: `Breaking`, luego `PotentiallyBreaking`, luego `Compatible`; dentro de cada grupo por método y path.
+Orden de reporte: `Breaking`, luego `PotentiallyBreaking`, luego `Compatible`; dentro de cada grupo por método y path. Bajo cada detalle puede aparecer una línea adicional `↳` con la sugerencia determinista de remediación para esa regla (CW001–CW018 tienen texto en el catálogo).
 
 ## Salida markdown
 
@@ -56,10 +57,10 @@ Pensada para comentarios de PR (la consume la GitHub Action de Fase 2). Veredict
 
 This PR introduces **6 breaking** contract changes.
 
-| Severity | Operation | Change | Rule |
-|---|---|---|---|
-| ✗ Breaking | `POST /orders` | Required request property added: currency | CW004 |
-| ⚠ Potentially breaking | `GET /payments` | Response enum widened: status | CW010 |
+| Severity | Operation | Change | Rule | Suggestion |
+|---|---|---|---|---|
+| ✗ Breaking | `POST /orders` | Required request property added: currency | CW004 | Introduce the property as optional with a default value and promote it to required only in a major version. |
+| ⚠ Potentially breaking | `GET /payments` | Response enum widened: status | CW010 | Announce the new case in the changelog and let consumers handle it before emitting it. |
 
 6 breaking · 1 potentially breaking · 7 compatible
 ```
@@ -87,11 +88,14 @@ This PR introduces **6 breaking** contract changes.
       },
       "message": "Required request property added: customerId",
       "oldValue": null,
-      "newValue": "customerId"
+      "newValue": "customerId",
+      "suggestion": "Introduce the property as optional with a default value and promote it to required only in a major version."
     }
   ]
 }
 ```
+
+El campo `suggestion` lleva la remediación determinista de la regla y puede ser `null` (igual que `oldValue`/`newValue`).
 
 Errores van a stderr en texto plano; nada de JSON parcial ante fallo de parsing.
 
@@ -101,7 +105,7 @@ Errores van a stderr en texto plano; nada de JSON parcial ante fallo de parsing.
 
 - Solo incluye cambios `Breaking` (level `error`) y `PotentiallyBreaking` (level `warning`); los compatibles se excluyen porque SARIF reporta problemas.
 - Cada result lleva `ruleId`, `ruleIndex` (índice en `tool.driver.rules`), `message.text` y `locations[0].physicalLocation.artifactLocation.uri` con la ruta del spec evaluado.
-- `properties` preserva la clasificación de ContractWatch: `severity`, `path` y `method`.
+- `properties` preserva la clasificación de ContractWatch: `severity`, `path`, `method` y la `suggestion` de remediación (puede ser `null`).
 
 ```json
 {
@@ -135,7 +139,8 @@ Errores van a stderr en texto plano; nada de JSON parcial ante fallo de parsing.
           "properties": {
             "severity": "Breaking",
             "path": "/orders",
-            "method": "POST"
+            "method": "POST",
+            "suggestion": "Introduce the parameter as optional with a server-side default and promote it to required only in a major version."
           }
         }
       ]

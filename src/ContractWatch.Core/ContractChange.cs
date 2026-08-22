@@ -7,4 +7,5 @@ public sealed record ContractChange(
     ChangeLocation Location,
     string Message,
     string? OldValue = null,
-    string? NewValue = null);
+    string? NewValue = null,
+    string? Suggestion = null);

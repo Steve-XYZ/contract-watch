@@ -74,7 +74,7 @@ Sigue abierto para esta fase: grafo de propagación multi-API (una API que rompe
 
 - Version history: evolución de compatibilidad de una API a lo largo del tiempo.
 - Dashboard de contratos y sus consumidores.
-- AI explanation de cada breaking change y sugerencia del cambio mínimo compatible.
+- AI explanation de cada breaking change y sugerencia del cambio mínimo compatible — parcial ✅: los textos deterministas de remedio por regla (CW001–CW018) ya viajan en los cuatro reportes (`↳` en consola, columna/campo `suggestion`); la explicación con IA sigue abierta.
 
 ## No hacer
 

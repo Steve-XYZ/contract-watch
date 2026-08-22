@@ -39,4 +39,21 @@ public class ConsoleReporterTests
         Assert.Contains("No contract changes detected.", output);
         Assert.EndsWith("0 breaking · 0 potentially breaking · 0 compatible", output);
     }
+
+    [Fact]
+    public void Muestra_la_sugerencia_indentada_bajo_el_detalle()
+    {
+        var changes = new[]
+        {
+            new ContractChange("CW003", "RequiredParameterAdded", ChangeSeverity.Breaking,
+                Orders, "Required parameter added: x-trace-id",
+                Suggestion: "Introduce the parameter as optional with a default first."),
+        };
+
+        var output = ConsoleReporter.Render(changes);
+        var lines = output.Split(Environment.NewLine);
+
+        Assert.Equal("    ↳ Introduce the parameter as optional with a default first.", lines[2]);
+        Assert.DoesNotContain("↳", lines[1]);
+    }
 }

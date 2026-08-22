@@ -57,6 +57,7 @@ public static class SarifReporter
             ["severity"] = change.Severity.ToString(),
             ["path"] = change.Location.Path,
             ["method"] = change.Location.Method,
+            ["suggestion"] = change.Suggestion,
         });
 
     private sealed record SarifLog(

@@ -55,7 +55,8 @@ public static class JsonReporter
         new Location(change.Location.Path, change.Location.Method, change.Location.JsonPointer),
         change.Message,
         change.OldValue,
-        change.NewValue);
+        change.NewValue,
+        change.Suggestion);
 
     private sealed record Report(
         string Tool,
@@ -75,7 +76,8 @@ public static class JsonReporter
         Location Location,
         string Message,
         string? OldValue,
-        string? NewValue);
+        string? NewValue,
+        string? Suggestion);
 
     private sealed record Location(string Path, string? Method, string? JsonPointer);
 }

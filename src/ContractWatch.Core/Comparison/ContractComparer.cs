@@ -18,6 +18,6 @@ public sealed class ContractComparer(IReadOnlyList<IContractRule>? rules = null)
     {
         var changes = ComparisonOrdering.Apply(_rules.SelectMany(rule => rule.Evaluate(previous, current)));
 
-        return new ComparisonResult(changes);
+        return new ComparisonResult([.. changes.Select(c => c with { Suggestion = RemediationCatalog.For(c.RuleId) })]);
     }
 }
