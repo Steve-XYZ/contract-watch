@@ -1,0 +1,79 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Orders API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/orders": {
+      "post": {
+        "operationId": "createOrder",
+        "parameters": [
+          { "name": "idempotency-key", "in": "header", "required": false, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateOrder" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "created" },
+          "404": { "description": "player not found" }
+        }
+      },
+      "get": {
+        "operationId": "listOrders",
+        "responses": {
+          "200": { "description": "ok" }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "parameters": [
+        { "name": "verbose", "in": "query", "required": false, "schema": { "type": "boolean" } }
+      ],
+      "get": {
+        "operationId": "getOrder",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "ok" }
+        }
+      },
+      "delete": {
+        "operationId": "cancelOrder",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "cancelled" }
+        }
+      }
+    },
+    "/legacy/orders": {
+      "post": {
+        "operationId": "createLegacyOrder",
+        "responses": {
+          "200": { "description": "ok" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateOrder": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string" },
+          "currency": { "type": "string", "enum": ["USD", "EUR"] },
+          "metadata": { "type": "object" }
+        },
+        "required": ["customerId"]
+      }
+    }
+  }
+}

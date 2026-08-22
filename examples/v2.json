@@ -1,0 +1,76 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Orders API",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/orders": {
+      "post": {
+        "operationId": "createOrder",
+        "parameters": [
+          { "name": "idempotency-key", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "x-trace-id", "in": "header", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateOrder" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "created" }
+        }
+      },
+      "get": {
+        "operationId": "listOrders",
+        "parameters": [
+          { "name": "locale", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "ok" }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "parameters": [
+        { "name": "verbose", "in": "query", "required": false, "schema": { "type": "boolean" } }
+      ],
+      "get": {
+        "operationId": "getOrder",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "ok" },
+          "404": { "description": "order not found" }
+        }
+      }
+    },
+    "/refunds": {
+      "get": {
+        "operationId": "listRefunds",
+        "responses": {
+          "200": { "description": "ok" },
+          "404": { "description": "order not found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateOrder": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string" },
+          "currency": { "type": "string", "enum": ["USD", "EUR"] },
+          "metadata": { "type": "object" },
+          "note": { "type": "string" }
+        },
+        "required": ["customerId", "currency"]
+      }
+    }
+  }
+}
