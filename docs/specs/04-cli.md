@@ -14,6 +14,7 @@ contractwatch compare <old.json> <new.json> [options]
 | `new` | path | — | contrato propuesto (ej. `PR/openapi.json`) |
 | `--format` | `console` \| `json` \| `markdown` \| `sarif` | `console` | formato del reporte |
 | `--fail-on` | `breaking` \| `potentially` \| `never` | `breaking` (o `.contractwatch.json`) | severidad mínima que produce exit code 1 |
+| `--save` | directorio | — | guarda el reporte como JSON en el historial local (ver [history](#history---historial-local-de-reportes)) |
 
 ## Exit codes
 
@@ -156,6 +157,7 @@ contractwatch compare examples/v1.json examples/v2.json
 contractwatch compare main/openapi.json pr/openapi.json --format json
 contractwatch compare old.json new.json --fail-on potentially   # CI estricto
 contractwatch compare main/openapi.json pr/openapi.json --format sarif > contractwatch.sarif
+contractwatch compare old.json new.json --save reports          # guarda en el historial local
 ```
 
 ## check — gate de CI
@@ -164,11 +166,12 @@ contractwatch compare main/openapi.json pr/openapi.json --format sarif > contrac
 contractwatch check --baseline <git-ref> <spec-path> [options]
 ```
 
-Resuelve la versión base del spec vía `git show <ref>:<spec-path>` (sin checkout) y la compara contra el archivo del árbol de trabajo, en la misma ruta relativa. Comparte `--format`, `--fail-on`, suppressions y policies con `compare`; mismos exit codes. Fallos de git (ref inexistente, archivo ausente en el ref) → exit 2.
+Resuelve la versión base del spec vía `git show <ref>:<spec-path>` (sin checkout) y la compara contra el archivo del árbol de trabajo, en la misma ruta relativa. Comparte `--format`, `--fail-on`, `--save`, suppressions y policies con `compare`; mismos exit codes. Fallos de git (ref inexistente, archivo ausente en el ref) → exit 2.
 
 ```
 contractwatch check --baseline origin/main openapi.json
 contractwatch check --baseline HEAD examples/v1.json --format markdown
+contractwatch check --baseline origin/main openapi.json --save reports
 ```
 
 ## init — scaffolding de configuración
@@ -187,6 +190,50 @@ Listo. 2 creado(s), 1 existente(s).
 ```
 
 Errores de I/O → exit 2 con el mensaje en stderr; caso normal exit 0.
+
+## history — historial local de reportes
+
+`--save <directorio>` (en `compare` y `check`) guarda cada reporte como JSON en `<directorio>/yyyyMMdd-HHmmss-<tipo>.json` (`tipo` es `compare` o `check`; dos saves en el mismo segundo agregan sufijo `-2`, `-3`, …). El directorio se crea si no existe. El archivo contiene exactamente el objeto de `--format json` más un sobre `meta`:
+
+```json
+{
+  "tool": "contractwatch",
+  "version": "0.2.0",
+  "summary": { "breaking": 6, "potentiallyBreaking": 0, "compatible": 4 },
+  "changes": [ ... ],
+  "meta": {
+    "savedAt": "2026-08-22T17:03:11.3917594Z",
+    "command": "compare",
+    "inputs": ["/repo/main/openapi.json", "/repo/pr/openapi.json"]
+  }
+}
+```
+
+En `check`, `inputs[0]` es el git-ref y `inputs[1]` la ruta del spec. Guardar es best-effort: tras guardar se imprime `Reporte guardado en <ruta>` (stderr en formatos `json`/`sarif` para no contaminar la salida estructurada; stdout en `console`/`markdown`) y un fallo de I/O emite un aviso en stderr sin alterar el exit code.
+
+El comando `history` consulta ese historial:
+
+```
+contractwatch history [--dir <directorio>] [--limit N] [--show <archivo>]
+```
+
+| Opción | Default | Descripción |
+|---|---|---|
+| `--dir` | `reports` | directorio del historial |
+| `--limit` | `20` | máximo de reportes listados |
+| `--show` | — | imprime el contenido crudo de un archivo del historial y termina |
+
+Sin `--show`, lista los reportes del más nuevo al más viejo:
+
+```
+2026-08-22T17:03:11Z  compare  FAILED      6 breaking · 0 potentially · 4 compatible   yyyyMMdd-HHmmss-compare.json
+2026-08-21T09:15:02Z  check    PASSED      0 breaking · 0 potentially · 3 compatible   yyyyMMdd-HHmmss-check.json
+— sin-meta.json: ilegible, omitido
+```
+
+El veredicto deriva del resumen: `FAILED` si hay breaking, `WARNING` si solo potentially breaking, `PASSED` en el resto. Archivos que no parsean o no tienen `summary` ni `meta` se marcan `ilegible, omitido` y el listado continúa. `--show <archivo>` acepta una ruta relativa a `--dir` o absoluta.
+
+Errores: directorio inexistente o archivo inexistente en `--show` → mensaje claro + exit 2; caso normal exit 0.
 
 ## Supresiones (`.contractwatchignore`)
 

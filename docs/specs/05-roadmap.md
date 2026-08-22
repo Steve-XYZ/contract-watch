@@ -72,7 +72,7 @@ Sigue abierto para esta fase: grafo de propagación multi-API (una API que rompe
 
 ## Exploratorio
 
-- Version history: evolución de compatibilidad de una API a lo largo del tiempo.
+- Version history: evolución de compatibilidad de una API a lo largo del tiempo — parcial ✅: historial local por archivos (`--save` en `compare`/`check` guarda cada reporte con sobre `meta`; `contractwatch history` lista y consulta, ver [04-cli](04-cli.md#history---historial-local-de-reportes)); tendencias/gráficos y multi-repo quedan abiertos.
 - Dashboard de contratos y sus consumidores.
 - AI explanation de cada breaking change y sugerencia del cambio mínimo compatible — parcial ✅: los textos deterministas de remedio por regla (CW001–CW018) ya viajan en los cuatro reportes (`↳` en consola, columna/campo `suggestion`); la explicación con IA sigue abierta.
 

@@ -33,14 +33,17 @@ public static class JsonReporter
 
     public static string Render(ComparisonResult result) => Render(result, null);
 
-    public static string Render(ComparisonResult result, IReadOnlyList<AffectedConsumer>? impact)
+    public static string Render(ComparisonResult result, IReadOnlyList<AffectedConsumer>? impact) => Render(result, impact, null);
+
+    public static string Render(ComparisonResult result, IReadOnlyList<AffectedConsumer>? impact, ReportMeta? meta)
     {
         var report = new Report(
             "contractwatch",
             ToolVersion,
             new Summary(result.Count(ChangeSeverity.Breaking), result.Count(ChangeSeverity.PotentiallyBreaking), result.Count(ChangeSeverity.Compatible)),
             [.. result.Changes.Select(ToChangeEntry)],
-            impact is null ? null : [.. impact.Select(ToAffectedEntry)]);
+            impact is null ? null : [.. impact.Select(ToAffectedEntry)],
+            meta);
 
         return JsonSerializer.Serialize(report, Options);
     }
@@ -63,7 +66,8 @@ public static class JsonReporter
         string Version,
         Summary Summary,
         ChangeEntry[] Changes,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AffectedConsumerEntry[]? AffectedConsumers = null);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AffectedConsumerEntry[]? AffectedConsumers = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ReportMeta? Meta = null);
 
     private sealed record AffectedConsumerEntry(string Service, ConfidenceLevel Confidence, int Changes);
 
@@ -81,3 +85,5 @@ public static class JsonReporter
 
     private sealed record Location(string Path, string? Method, string? JsonPointer);
 }
+
+public record ReportMeta(string SavedAt, string Command, IReadOnlyList<string> Inputs);
