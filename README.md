@@ -51,4 +51,4 @@ El action comenta el veredicto en el PR (idempotente) y falla si hay cambios bre
 
 ## Estado
 
-Fases 1–3 completas: CLI con las 18 reglas del catálogo (`compare` + `check --baseline`, formatos console/json/markdown/sarif, exit codes), GitHub Action con comentario idempotente en PRs y gate de CI con suppressions justificadas (`.contractwatchignore`). Fase 4 parcial: policies por repo (`.contractwatch.json` con `failOn` y `severityOverrides`) y salida SARIF (`--format sarif`). Sin BD; los demás formatos de contrato y "¿quién se rompe?" quedan para después.
+Fases 1–3 completas: CLI con las 18 reglas del catálogo (`compare` + `check --baseline`, formatos console/json/markdown/sarif, exit codes), GitHub Action con comentario idempotente en PRs y gate de CI con suppressions justificadas (`.contractwatchignore`). Fase 4 parcial: policies por repo (`.contractwatch.json` con `failOn` y `severityOverrides`) y salida SARIF (`--format sarif`). Fase 5 MVP: análisis de impacto declarativo (`consumers.json`) que responde *¿quién se rompe?* con confianza alta/media por consumidor. Sin BD ni grafo multi-API; los demás formatos de contrato quedan para después.

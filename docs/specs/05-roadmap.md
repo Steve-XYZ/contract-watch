@@ -53,17 +53,9 @@ Implementado: `check` resuelve el spec de la rama base vía `git show` (sin chec
   - event contracts / MassTransit message contracts
   - consumer-driven contracts (Pact-like)
 
-## Fase 5 — "¿Quién se rompe?"
+## Fase 5 — "¿Quién se rompe?" (MVP ✅)
 
-Guardar relaciones de consumo:
-
-```
-PlayerManager ─── consumes ─── Payments API v2
-Admin ────────── consumes ─── PlayerManager API
-Propagator ───── consumes ─── DrawResultEvent
-```
-
-Un PR entonces puede decir:
+Registro declarativo de consumidores en `consumers.json` (auto-detectado, `--consumers` lo sobreescribe): cada servicio declara las operaciones que consume (`"METHOD /path"` o `"/path"`) y el análisis de impacto cruza el diff contra esas declaraciones. Un PR entonces puede decir:
 
 > Changing `PlayerDto.country`
 >
@@ -74,7 +66,9 @@ Un PR entonces puede decir:
 >
 > Confidence: high
 
-Esto convierte el diff en grafo de propagación y acerca el proyecto a producto comercial. Requiere registro de servicios (primer estado durable del sistema) y políticas de confianza sobre esas relaciones.
+La confianza es declarativa: **high** cuando la entrada fija método+path exactos, **medium** cuando solo declara path (cualquier método). Solo cuentan cambios breaking y potentially breaking, después de policies y suppressions; es informativo — no altera los exit codes. Ver [04-cli](04-cli.md#registro-de-consumidores-consumersjson).
+
+Sigue abierto para esta fase: grafo de propagación multi-API (una API que rompe a otra API encadena el impacto), base de datos durable de relaciones de consumo y confianza basada en telemetría real en lugar de declaraciones.
 
 ## Exploratorio
 
