@@ -20,9 +20,9 @@ compareCommand.SetAction(async (parseResult, cancellationToken) =>
     var format = parseResult.GetValue(formatOption)!;
     var failOn = parseResult.GetValue(failOnOption)!;
 
-    if (format is not ("console" or "json"))
+    if (format is not ("console" or "json" or "markdown"))
     {
-        Console.Error.WriteLine($"error: --format desconocido '{format}' (console|json)");
+        Console.Error.WriteLine($"error: --format desconocido '{format}' (console|json|markdown)");
         return 2;
     }
 
@@ -54,9 +54,12 @@ compareCommand.SetAction(async (parseResult, cancellationToken) =>
 
         var result = new ContractComparer().Compare(previous, current);
 
-        Console.Out.WriteLine(format == "json"
-            ? JsonReporter.Render(result)
-            : ConsoleReporter.Render(result.Changes));
+        Console.Out.WriteLine(format switch
+        {
+            "json" => JsonReporter.Render(result),
+            "markdown" => MarkdownReporter.Render(result),
+            _ => ConsoleReporter.Render(result.Changes),
+        });
 
         ChangeSeverity? threshold = failOn switch
         {

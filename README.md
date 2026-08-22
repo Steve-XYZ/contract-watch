@@ -27,6 +27,28 @@ No hace un diff: entiende compatibilidad de contratos — y entiende que la comp
 | [04-cli](docs/specs/04-cli.md) | comando, opciones, exit codes, formatos de salida |
 | [05-roadmap](docs/specs/05-roadmap.md) | GitHub integration, gate de CI, "¿quién se rompe?" |
 
+## Uso en tu repo (GitHub Action)
+
+```yaml
+# .github/workflows/api-compatibility.yml
+name: api-compatibility
+on: [pull_request]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  contractwatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Steve-XYZ/contract-watch@main
+        with:
+          base-spec: openapi.json    # generado por TU build, resuelto en la rama base
+          head-spec: openapi.json    # la versión de este PR
+```
+
+El action comenta el veredicto en el PR (idempotente) y falla si hay cambios breaking.
+
 ## Estado
 
-Fase 1 (MVP): CLI con `compare`. Sin BD, sin frontend, sin integraciones.
+Fase 1 y Fase 2 completas: CLI con las 18 reglas del catálogo (`compare`, formatos console/json/markdown) + GitHub Action con comentario idempotente en PRs. Sin BD; GitHub App con checks queda para después.

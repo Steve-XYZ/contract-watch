@@ -10,7 +10,7 @@ contractwatch compare <old.json> <new.json> [options]
 |---|---|---|---|
 | `old` | path | — | contrato base (ej. `main/openapi.json`) |
 | `new` | path | — | contrato propuesto (ej. `PR/openapi.json`) |
-| `--format` | `console` \| `json` | `console` | formato del reporte |
+| `--format` | `console` \| `json` \| `markdown` | `console` | formato del reporte |
 | `--fail-on` | `breaking` \| `potentially` \| `never` | `breaking` | severidad mínima que produce exit code 1 |
 
 ## Exit codes
@@ -44,6 +44,23 @@ Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el 
 ```
 
 Orden de reporte: `Breaking`, luego `PotentiallyBreaking`, luego `Compatible`; dentro de cada grupo por método y path.
+
+## Salida markdown
+
+Pensada para comentarios de PR (la consume la GitHub Action de Fase 2). Veredicto según severidad máxima presente: `FAILED` (hay breaking), `WARNING` (solo potentially breaking), `PASSED`.
+
+```markdown
+## API compatibility: FAILED
+
+This PR introduces **6 breaking** contract changes.
+
+| Severity | Operation | Change | Rule |
+|---|---|---|---|
+| ✗ Breaking | `POST /orders` | Required request property added: currency | CW004 |
+| ⚠ Potentially breaking | `GET /payments` | Response enum widened: status | CW010 |
+
+6 breaking · 1 potentially breaking · 7 compatible
+```
 
 ## Salida json
 

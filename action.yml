@@ -1,0 +1,122 @@
+name: 'ContractWatch'
+description: 'Detecta cambios que rompen consumidores de tu API: compara dos contratos OpenAPI y comenta el veredicto en el PR'
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  base-ref:
+    description: 'Ref de git que contiene el contrato base (default: rama destino del PR)'
+    required: false
+    default: ${{ github.base_ref }}
+  base-spec:
+    description: 'Ruta del OpenAPI base, relativa a la raíz del repo'
+    required: true
+  head-spec:
+    description: 'Ruta del OpenAPI propuesto, relativa a la raíz del checkout actual'
+    required: true
+  fail-on:
+    description: 'Severidad mínima que marca el check como fallido: breaking | potentially | never'
+    required: false
+    default: breaking
+  comment:
+    description: 'Publicar o actualizar el reporte como comentario del PR: true | false'
+    required: false
+    default: 'true'
+  comment-tag:
+    description: 'Etiqueta para permitir varios reportes independientes por PR'
+    required: false
+    default: default
+  token:
+    description: 'Token de GitHub para comentar en el PR'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout contrato base
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository }}
+        ref: ${{ inputs.base-ref }}
+        path: cw-base-contract
+        fetch-depth: 1
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Compare contracts
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -uo pipefail
+
+        report="$RUNNER_TEMP/contractwatch-report.md"
+        error_log="$RUNNER_TEMP/contractwatch-error.log"
+
+        base_file="$GITHUB_WORKSPACE/cw-base-contract/${{ inputs.base-spec }}"
+        head_file="$GITHUB_WORKSPACE/${{ inputs.head-spec }}"
+
+        for f in "$base_file" "$head_file"; do
+          if [ ! -f "$f" ]; then
+            echo "::error::No se encontró el contrato '$f'"
+            exit 2
+          fi
+        done
+
+        dotnet build "$GITHUB_ACTION_PATH/src/ContractWatch.Cli" -c Release --nologo -v quiet \
+          || { echo "::error::Fallo el build del CLI de ContractWatch"; exit 2; }
+
+        exit_code=0
+        dotnet run --project "$GITHUB_ACTION_PATH/src/ContractWatch.Cli" -c Release --no-build -- \
+          compare "$base_file" "$head_file" \
+          --format markdown \
+          --fail-on "${{ inputs.fail-on }}" \
+          > "$report" 2> "$error_log" || exit_code=$?
+
+        if [ "$exit_code" -eq 2 ]; then
+          echo "::error::Los contratos no pudieron cargarse como OpenAPI válido:"
+          cat "$error_log"
+          exit 2
+        fi
+
+        cat "$report"
+        {
+          echo "### ContractWatch"
+          cat "$report"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        comment="${{ inputs.comment }}"
+        pr_number="${{ github.event.pull_request.number }}"
+
+        if [ "$comment" = "true" ] && [ -n "$pr_number" ]; then
+          marker="<!-- contractwatch:${{ inputs.comment-tag }} -->"
+          repo="${{ github.repository }}"
+
+          body_file="$RUNNER_TEMP/contractwatch-comment.md"
+          {
+            printf '%s\n' "$marker"
+            cat "$report"
+            printf '\n---\n<sub>contractwatch · comparando <code>%s</code> → <code>%s</code> · fail-on %s</sub>\n' \
+              "${{ inputs.base-spec }}" "${{ inputs.head-spec }}" "${{ inputs.fail-on }}"
+          } > "$body_file"
+
+          comment_id=$(gh api "repos/$repo/issues/$pr_number/comments" \
+            --jq "[.[] | select(.body | startswith(\"$marker\"))][0].id" 2>/dev/null || true)
+
+          payload=$(jq -Rs '{body: .}' "$body_file")
+
+          if [ -n "$comment_id" ] && [ "$comment_id" != "null" ]; then
+            gh api -X PATCH "repos/$repo/issues/comments/$comment_id" --input - <<< "$payload" > /dev/null
+            echo "Reporte actualizado en el comentario existente del PR."
+          else
+            gh api -X POST "repos/$repo/issues/$pr_number/comments" --input - <<< "$payload" > /dev/null
+            echo "Reporte publicado como comentario del PR."
+          fi
+        fi
+
+        exit "$exit_code"

@@ -2,31 +2,35 @@
 
 Orden deliberado: cada etapa entrega valor autónomo sin obligar a la siguiente.
 
-## Fase 1 — CLI útil (MVP)
+## Fase 1 — CLI útil (MVP) ✅
 
-`compare` con catálogo inicial de reglas, salida console/json, exit codes. Publicable como tool de .NET (`dotnet tool install contractwatch`).
+`compare` con catálogo completo de 18 reglas (CW001–CW018), salida console/json/markdown, exit codes. Publicable como tool de .NET (`dotnet tool install contractwatch`).
 
-## Fase 2 — Integración en PRs
+## Fase 2 — Integración en PRs ✅
 
 ```
 PR opened
-   ↓ build API
-   ↓ generate OpenAPI
-   ↓ ContractWatch
-   ↓ PR comment
+   ↓ checkout base ref
+   ↓ ContractWatch action
+   ↓ PR comment (idempotente)
+   ↓ exit code según --fail-on
 ```
 
-Comentario tipo:
+Implementada como acción compuesta (`action.yml`) reutilizable desde cualquier repo:
 
-> **API compatibility: FAILED**
->
-> This PR introduces 2 breaking contract changes.
->
-> **POST /bets** — `providerId` became required
->
-> **GET /bets/{id}** — `settledAt` changed string|null → string
+```yaml
+- uses: Steve-XYZ/contract-watch@main
+  with:
+    base-spec: openapi.json      # resuelto en la rama base
+    head-spec: openapi.json      # generado por el build del consumidor
+    fail-on: breaking
+```
 
-Primero como GitHub Action que invoca el CLI con `--format json`; después, si hay tracción, GitHub App con checks por commit.
+El comentario se publica/actualiza de forma idempotente vía marcador `<!-- contractwatch:<tag> -->`; varios reportes por PR coexisten con tags distintos. El formato del comentario es `--format markdown` (evolución sobre el plan original de parsear JSON en bash: el reporter vive en Core y tiene tests). El JSON sigue disponible para integraciones programáticas.
+
+Limitación conocida: en PRs de forks el GITHUB_TOKEN es read-only y el comentario no puede publicarse; el check de exit code sí funciona.
+
+Después, si hay tracción: GitHub App con checks por commit.
 
 ## Fase 3 — Gate de CI
 
