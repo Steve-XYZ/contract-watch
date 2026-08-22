@@ -9,12 +9,15 @@ public static class RuleCatalog
         new RequiredParameterAdded(),
         new RequiredPropertyAdded(),
         new ParameterTypeChanged(),
+        new RequestEnumNarrowed(),
         new ResponseStatusRemoved(),
         new ResponsePropertyTypeChanged(),
         new ResponsePropertyRemoved(),
+        new ResponseEnumWidened(),
         new EndpointAdded(),
         new OptionalParameterAdded(),
         new OptionalPropertyAdded(),
+        new RequestEnumWidened(),
         new ResponseStatusAdded(),
     ];
 }

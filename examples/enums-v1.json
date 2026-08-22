@@ -1,0 +1,94 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Payments Enums API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/bets": {
+      "post": {
+        "operationId": "createBet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "region": { "type": "string", "enum": ["EU"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "ok" }
+        }
+      }
+    },
+    "/bets/{id}": {
+      "get": {
+        "operationId": "getBet",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "enum": ["PAID", "FAILED"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": { "type": "string", "enum": ["UP", "DOWN"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments": {
+      "post": {
+        "operationId": "createPayment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currency": { "type": "string", "enum": ["USD", "EUR"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "ok" }
+        }
+      }
+    }
+  }
+}
