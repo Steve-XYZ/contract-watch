@@ -1,0 +1,38 @@
+name: api-compatibility
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dogfood:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Green path (policies fixtures, warnings no bloquean)
+        uses: ./
+        with:
+          base-spec: examples/policies-v1.json
+          head-spec: examples/policies-v2.json
+          fail-on: breaking
+          comment-tag: dogfood-green
+
+      - name: Red path (v1 → v2 debe fallar con 6 breaking)
+        id: red
+        continue-on-error: true
+        uses: ./
+        with:
+          base-spec: examples/v1.json
+          head-spec: examples/v2.json
+          comment: 'false'
+
+      - name: Assert camino rojo falló como se esperaba
+        if: steps.red.outcome == 'success'
+        run: |
+          echo "::error::El camino rojo (v1 → v2) terminó en éxito; se esperaba exit 1 por breaking changes"
+          exit 1
