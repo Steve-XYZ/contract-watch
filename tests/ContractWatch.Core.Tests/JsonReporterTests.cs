@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using ContractWatch.Core;
 using ContractWatch.Core.Comparison;
@@ -7,6 +8,17 @@ namespace ContractWatch.Core.Tests;
 
 public class JsonReporterTests
 {
+    [Fact]
+    public void La_version_reportada_deriva_del_ensamblado_y_no_esta_hardcodeada()
+    {
+        var assembly = typeof(JsonReporter).Assembly;
+        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
+        var expected = informational.Contains('+') ? informational.Split('+')[0] : informational;
+
+        Assert.Equal(expected, JsonReporter.ToolVersion);
+        Assert.NotEqual("0.0.0", JsonReporter.ToolVersion);
+    }
+
     [Fact]
     public void Renderiza_json_estable_con_resumen_y_cambios_en_camel_case()
     {

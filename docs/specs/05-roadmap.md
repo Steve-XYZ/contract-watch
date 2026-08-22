@@ -4,7 +4,7 @@ Orden deliberado: cada etapa entrega valor autónomo sin obligar a la siguiente.
 
 ## Fase 1 — CLI útil (MVP) ✅
 
-`compare` con catálogo completo de 18 reglas (CW001–CW018), salida console/json/markdown, exit codes. Publicable como tool de .NET (`dotnet tool install contractwatch`).
+`compare` con catálogo completo de 18 reglas (CW001–CW018), salida console/json/markdown, exit codes. Publicable como tool de .NET (`dotnet tool install contractwatch`). ✅ Empaquetado hecho: `dotnet pack` produce el nupkg autocontenido `ContractWatch` (comando `contractwatch`, versión única desde MSBuild) y un workflow de release por tags `v*` adjunta los nupkg al GitHub Release; pendiente publicar en NuGet.org.
 
 ## Fase 2 — Integración en PRs ✅
 
