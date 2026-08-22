@@ -40,11 +40,11 @@ contractwatch check --baseline origin/main <spec>
 
 Implementado: `check` resuelve el spec de la rama base vía `git show` (sin checkout intermedio) y aplica los exit codes del CLI. Suppressions en `.contractwatchignore` con formato `<ruleId> <path> [<method>] :: <razón>` — la justificación es obligatoria y el archivo se auto-detecta; la revisabilidad vive en el diff del PR que lo introduce.
 
-## Fase 4 — Políticas y formatos
+## Fase 4 — Políticas y formatos (parcial ✅)
 
-- Compatibility policies por repo: qué severidades bloquean, allowlists por regla.
-- SARIF output para mostrar hallazgos inline en el PR.
-- Otros contratos, uno a la vez según demanda real:
+- Compatibility policies por repo ✅: `.contractwatch.json` auto-detectado, con `failOn` por defecto (precedencia flag > policy > default breaking) y `severityOverrides` que re-mapean severidades por regla después de comparar y antes de suprimir/reportear; validación anti-typos contra el catálogo (CW001–CW018), errores → exit 2. Ver [04-cli](04-cli.md#policies-contractwatchjson).
+- SARIF output ✅: `--format sarif` emite SARIF 2.1.0 con levels error/warning para subir a GitHub code scanning y mostrar hallazgos inline en el PR.
+- Otros formatos de contrato quedan abiertos según demanda real, uno a la vez:
   - AsyncAPI
   - GraphQL schema compatibility
   - protobuf/gRPC

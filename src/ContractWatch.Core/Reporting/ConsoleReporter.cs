@@ -1,14 +1,12 @@
+using ContractWatch.Core.Comparison;
+
 namespace ContractWatch.Core.Reporting;
 
 public static class ConsoleReporter
 {
     public static string Render(IReadOnlyList<ContractChange> changes)
     {
-        var ordered = changes
-            .OrderByDescending(c => c.Severity)
-            .ThenBy(c => c.Location.Path, StringComparer.Ordinal)
-            .ThenBy(c => c.Location.Method ?? string.Empty, StringComparer.Ordinal)
-            .ToList();
+        var ordered = ComparisonOrdering.Apply(changes);
 
         var lines = new List<string>();
 

@@ -16,13 +16,7 @@ public sealed class ContractComparer(IReadOnlyList<IContractRule>? rules = null)
 
     public ComparisonResult Compare(ApiContract previous, ApiContract current)
     {
-        var changes = _rules
-            .SelectMany(rule => rule.Evaluate(previous, current))
-            .OrderByDescending(c => c.Severity)
-            .ThenBy(c => c.Location.Path, StringComparer.Ordinal)
-            .ThenBy(c => c.Location.Method ?? string.Empty, StringComparer.Ordinal)
-            .ThenBy(c => c.RuleId, StringComparer.Ordinal)
-            .ToList();
+        var changes = ComparisonOrdering.Apply(_rules.SelectMany(rule => rule.Evaluate(previous, current)));
 
         return new ComparisonResult(changes);
     }
