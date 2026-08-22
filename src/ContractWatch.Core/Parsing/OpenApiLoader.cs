@@ -68,7 +68,9 @@ public static class OpenApiLoader
             method,
             [.. parameters.Select(p => new ApiParameter(p.Key.Name, p.Key.In, p.Value.Required == true, MapSchema(p.Value.Schema)))],
             RequestJsonSchema(operation.RequestBody),
-            MapResponses(operation.Responses));
+            MapResponses(operation.Responses),
+            operation.Summary,
+            operation.Description);
     }
 
     private static ApiSchema? RequestJsonSchema(IOpenApiRequestBody? requestBody) =>

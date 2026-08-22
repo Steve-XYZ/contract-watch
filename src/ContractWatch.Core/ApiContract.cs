@@ -9,6 +9,8 @@ public sealed record ApiOperation(
     string Method,
     IReadOnlyList<ApiParameter> Parameters,
     ApiSchema? RequestJsonSchema,
-    IReadOnlyDictionary<string, ApiResponse> Responses);
+    IReadOnlyDictionary<string, ApiResponse> Responses,
+    string? Summary = null,
+    string? Description = null);
 
 public sealed record ApiContract(IReadOnlyList<ApiOperation> Operations);
