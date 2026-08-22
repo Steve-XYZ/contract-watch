@@ -21,7 +21,7 @@ contractwatch compare <old.json> <new.json> [options]
 |---|---|
 | `0` | Sin cambios con severidad >= umbral de `--fail-on` |
 | `1` | Hay cambios que superan el umbral (bloquea CI) |
-| `2` | Error: archivo inexistente, JSON inválido, documento que no es OpenAPI, `.contractwatch.json` o supresión inválida |
+| `2` | Error: archivo inexistente, JSON inválido, documento que no es OpenAPI, `.contractwatch.json`, `.contractwatchignore` o `consumers.json` inválidos |
 
 Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el build: se muestran como advertencia.
 
@@ -203,6 +203,41 @@ Ambos campos son opcionales.
 - Errores → exit 2 con mensaje claro: JSON malformado, `failOn` inválido, regla desconocida o severidad inválida.
 
 El re-mapeo ocurre antes de suppressions y del reporte: un cambio degradado a `compatible` deja de superar umbrales, se cuenta como compatible y no aparece en la salida SARIF.
+
+## Registro de consumidores (`consumers.json`)
+
+Archivo por repo, auto-detectado en el directorio de trabajo para `compare` y `check` (`--consumers <ruta>` lo sobreescribe):
+
+```json
+{
+  "consumers": [
+    { "service": "admin-web", "operations": ["GET /players/{id}", "POST /bets"] },
+    { "service": "reporting-service", "operations": ["/players/{id}"] }
+  ]
+}
+```
+
+Cada operación es `"METHOD /path"` o `"/path"` (también vale `"* /path"`). El análisis de impacto cruza los cambios del diff con esas declaraciones y responde la pregunta de la Fase 5: *¿quién se rompe?*
+
+### Semántica de confianza
+
+| Entrada | Coincidencia | Confianza |
+|---|---|---|
+| `POST /orders` | método + path exactos (método sin distinción de mayúsculas) | **high** |
+| `/orders` o `* /orders` | solo path, cualquier método | **medium** |
+
+- Un cambio afecta a un consumidor si su path coincide exactamente con el de una entrada y (la entrada no declara método, o es `*`, o el método coincide).
+- Solo cuentan cambios `Breaking` y `PotentiallyBreaking`: los `Compatible` no impactan a nadie.
+- Si varias entradas del mismo consumidor coinciden con grados distintos, prevalece `high`; cada cambio se cuenta una sola vez por consumidor.
+- La lista sale ordenada por confianza descendente y luego servicio; sin duplicados.
+
+### Interacción con policies y suppressions
+
+El impacto se calcula **después** de aplicar `.contractwatch.json` (severityOverrides) y `.contractwatchignore`: un cambio degradado a compatible o suprimido deja de afectar a cualquier consumidor. El reporte aparece en console (`Consumidores afectados:` tras el resumen), markdown (sección `### Affected consumers`) y JSON (`affectedConsumers`); SARIF no cambia.
+
+### El exit code no se ve afectado
+
+El análisis es informativo: no agrega ni quita severidad al diff. Los exit codes siguen saliendo exclusivamente del umbral de `--fail-on` sobre los cambios post-supresión. Errores del archivo (JSON malformado, servicio vacío o duplicado, consumidor sin operaciones, entrada que no es `METHOD /path` ni `/path`) → exit 2.
 
 ## Decisiones
 

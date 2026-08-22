@@ -4,7 +4,9 @@ namespace ContractWatch.Core.Reporting;
 
 public static class MarkdownReporter
 {
-    public static string Render(ComparisonResult result)
+    public static string Render(ComparisonResult result) => Render(result, null);
+
+    public static string Render(ComparisonResult result, IReadOnlyList<AffectedConsumer>? impact)
     {
         var breaking = result.Count(ChangeSeverity.Breaking);
         var potentiallyBreaking = result.Count(ChangeSeverity.PotentiallyBreaking);
@@ -41,7 +43,22 @@ public static class MarkdownReporter
         lines.Add(string.Empty);
         lines.Add($"{breaking} breaking · {potentiallyBreaking} potentially breaking · {compatible} compatible");
 
+        if (impact is { Count: > 0 })
+            lines.AddRange(RenderImpact(impact));
+
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static IEnumerable<string> RenderImpact(IReadOnlyList<AffectedConsumer> impact)
+    {
+        yield return string.Empty;
+        yield return "### Affected consumers";
+        yield return string.Empty;
+        yield return "| Service | Confidence | Changes |";
+        yield return "|---|---|---|";
+
+        foreach (var consumer in impact)
+            yield return $"| {Escape(consumer.Service)} | {consumer.Confidence} | {consumer.Changes} |";
     }
 
     private static string Escape(string text) => text.Replace("|", "\\|");

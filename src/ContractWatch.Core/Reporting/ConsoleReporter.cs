@@ -4,7 +4,9 @@ namespace ContractWatch.Core.Reporting;
 
 public static class ConsoleReporter
 {
-    public static string Render(IReadOnlyList<ContractChange> changes)
+    public static string Render(IReadOnlyList<ContractChange> changes) => Render(changes, null);
+
+    public static string Render(IReadOnlyList<ContractChange> changes, IReadOnlyList<AffectedConsumer>? impact)
     {
         var ordered = ComparisonOrdering.Apply(changes);
 
@@ -27,8 +29,31 @@ public static class ConsoleReporter
 
         lines.Add(RenderSummary(ordered));
 
+        if (impact is not null)
+            lines.AddRange(RenderImpact(impact, ordered));
+
         return string.Join(Environment.NewLine, lines);
     }
+
+    private static IEnumerable<string> RenderImpact(IReadOnlyList<AffectedConsumer> impact, List<ContractChange> ordered)
+    {
+        if (impact.Count == 0)
+        {
+            if (ordered.Any(c => c.Severity != ChangeSeverity.Compatible))
+                yield return "Sin consumidores afectados.";
+
+            yield break;
+        }
+
+        yield return string.Empty;
+        yield return "Consumidores afectados:";
+
+        foreach (var consumer in impact)
+            yield return RenderAffected(consumer);
+    }
+
+    private static string RenderAffected(AffectedConsumer consumer) =>
+        $"  {consumer.Service} · confianza {(consumer.Confidence == ConfidenceLevel.High ? "alta" : "media")} · {consumer.Changes} cambio(s)";
 
     private static string RenderHeader(ContractChange change) => change.Severity switch
     {
