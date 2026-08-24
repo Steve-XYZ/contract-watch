@@ -56,4 +56,53 @@ public class ConsoleReporterTests
         Assert.Equal("    ↳ Introduce the parameter as optional with a default first.", lines[2]);
         Assert.DoesNotContain("↳", lines[1]);
     }
+
+    [Fact]
+    public void Muestra_la_explicacion_ia_indentada_tras_la_sugerencia()
+    {
+        var changes = new[]
+        {
+            new ContractChange("CW003", "RequiredParameterAdded", ChangeSeverity.Breaking,
+                Orders, "Required parameter added: x-trace-id",
+                Suggestion: "Introduce the parameter as optional with a default first.",
+                Explanation: "[fake] explains the change."),
+        };
+
+        var output = ConsoleReporter.Render(changes);
+        var lines = output.Split(Environment.NewLine);
+
+        Assert.Equal("    ↳ Introduce the parameter as optional with a default first.", lines[2]);
+        Assert.Equal("    ↳ IA: [fake] explains the change.", lines[3]);
+    }
+
+    [Fact]
+    public void Sin_explicacion_no_aparece_linea_ia()
+    {
+        var changes = new[]
+        {
+            new ContractChange("CW003", "RequiredParameterAdded", ChangeSeverity.Breaking,
+                Orders, "Required parameter added: x-trace-id",
+                Suggestion: "Introduce the parameter as optional with a default first."),
+        };
+
+        var output = ConsoleReporter.Render(changes);
+
+        Assert.DoesNotContain("↳ IA:", output);
+    }
+
+    [Fact]
+    public void La_explicacion_multilinea_se_aplasta_en_una_linea()
+    {
+        var changes = new[]
+        {
+            new ContractChange("CW003", "RequiredParameterAdded", ChangeSeverity.Breaking,
+                Orders, "Required parameter added: x-trace-id",
+                Explanation: "linea 1\nlinea 2"),
+        };
+
+        var output = ConsoleReporter.Render(changes);
+        var lines = output.Split(Environment.NewLine);
+
+        Assert.Equal("    ↳ IA: linea 1 linea 2", lines[2]);
+    }
 }

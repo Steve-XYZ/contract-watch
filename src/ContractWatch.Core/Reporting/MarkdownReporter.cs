@@ -13,6 +13,7 @@ public static class MarkdownReporter
         var compatible = result.Count(ChangeSeverity.Compatible);
 
         var verdict = breaking > 0 ? "FAILED" : potentiallyBreaking > 0 ? "WARNING" : "PASSED";
+        var withExplanations = result.Changes.Any(c => c.Explanation is not null);
         var lines = new List<string>
         {
             $"## API compatibility: {verdict}",
@@ -21,8 +22,12 @@ public static class MarkdownReporter
                 ? $"This PR introduces **{breaking} breaking** contract changes."
                 : "No breaking contract changes detected.",
             string.Empty,
-            "| Severity | Operation | Change | Rule | Suggestion |",
-            "|---|---|---|---|---|",
+            withExplanations
+                ? "| Severity | Operation | Change | Rule | Suggestion | AI |"
+                : "| Severity | Operation | Change | Rule | Suggestion |",
+            withExplanations
+                ? "|---|---|---|---|---|---|"
+                : "|---|---|---|---|---|",
         };
 
         foreach (var change in result.Changes)
@@ -37,8 +42,11 @@ public static class MarkdownReporter
                 ? $"`{Escape(change.Location.Path)}`"
                 : $"`{change.Location.Method} {Escape(change.Location.Path)}`";
             var suggestion = change.Suggestion is null ? string.Empty : Escape(change.Suggestion);
+            var explanation = change.Explanation is null || !withExplanations ? string.Empty : Escape(Flatten(change.Explanation));
 
-            lines.Add($"| {severity} | {target} | {Escape(change.Message)} | {change.RuleId} | {suggestion} |");
+            lines.Add(withExplanations
+                ? $"| {severity} | {target} | {Escape(change.Message)} | {change.RuleId} | {suggestion} | {explanation} |"
+                : $"| {severity} | {target} | {Escape(change.Message)} | {change.RuleId} | {suggestion} |");
         }
 
         lines.Add(string.Empty);
@@ -63,4 +71,6 @@ public static class MarkdownReporter
     }
 
     private static string Escape(string text) => text.Replace("|", "\\|");
+
+    private static string Flatten(string text) => text.ReplaceLineEndings(" ");
 }

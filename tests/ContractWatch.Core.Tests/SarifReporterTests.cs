@@ -121,6 +121,26 @@ public class SarifReporterTests
         Assert.Equal("Introduce the parameter as optional with a server-side default.", properties.GetProperty("suggestion").GetString());
     }
 
+    [Fact]
+    public void Properties_incluye_la_explicacion_cuando_existe_y_null_cuando_no()
+    {
+        var explained = new ComparisonResult(
+        [
+            new("CW003", "RequiredParameterAdded", ChangeSeverity.Breaking,
+                new ChangeLocation("/orders", "POST"), "Required parameter added: page",
+                Explanation: "[fake] CW003 at POST /orders."),
+            new("CW010", "EnumWidened", ChangeSeverity.PotentiallyBreaking,
+                new ChangeLocation("/payments"), "Response enum widened: + PENDING"),
+        ]);
+
+        var json = SarifReporter.Render(explained, "openapi.json");
+        using var document = JsonDocument.Parse(json);
+
+        var results = document.RootElement.GetProperty("runs")[0].GetProperty("results");
+        Assert.Equal("[fake] CW003 at POST /orders.", results[0].GetProperty("properties").GetProperty("explanation").GetString());
+        Assert.Equal(JsonValueKind.Null, results[1].GetProperty("properties").GetProperty("explanation").ValueKind);
+    }
+
     private static ComparisonResult Result() => new(
     [
         new("CW003", "RequiredParameterAdded", ChangeSeverity.Breaking,

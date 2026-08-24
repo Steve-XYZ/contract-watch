@@ -8,4 +8,5 @@ public sealed record ContractChange(
     string Message,
     string? OldValue = null,
     string? NewValue = null,
-    string? Suggestion = null);
+    string? Suggestion = null,
+    string? Explanation = null);
