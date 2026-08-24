@@ -90,10 +90,11 @@ async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string?
     var result = SuppressionFile.Apply(PolicyFile.Apply(original, policy), suppressions);
     var suppressed = SuppressionFile.CountSuppressed(original, result);
 
-    ConsumerRegistry registry;
+    ImpactAnalysis impact;
     try
     {
-        registry = ConsumerRegistryFile.LoadOrDefault(consumersFile);
+        var graph = ConsumerRegistryFile.LoadGraphOrDefault(consumersFile);
+        impact = ImpactAnalyzer.Analyze(result, graph);
     }
     catch (ConsumerRegistryException ex)
     {
@@ -101,14 +102,12 @@ async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string?
         return 2;
     }
 
-    var impact = ImpactAnalyzer.Analyze(result, registry);
-
     Console.Out.WriteLine(format switch
     {
-        "json" => JsonReporter.Render(result, impact),
-        "markdown" => MarkdownReporter.Render(result, impact),
+        "json" => JsonReporter.Render(result, impact.Consumers, impact.Chains, null),
+        "markdown" => MarkdownReporter.Render(result, impact.Consumers, impact.Chains),
         "sarif" => SarifReporter.Render(result, artifactUri),
-        _ => ConsoleReporter.Render(result.Changes, impact),
+        _ => ConsoleReporter.Render(result.Changes, impact.Consumers, impact.Chains),
     });
 
     if (suppressed > 0 && format is not ("json" or "sarif"))
@@ -117,7 +116,7 @@ async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string?
     if (saveDirectory is not null)
     {
         var savedAt = DateTime.UtcNow;
-        var json = JsonReporter.Render(result, impact, new ReportMeta(savedAt.ToString("o"), commandKind, inputs));
+        var json = JsonReporter.Render(result, impact.Consumers, impact.Chains, new ReportMeta(savedAt.ToString("o"), commandKind, inputs));
 
         try
         {

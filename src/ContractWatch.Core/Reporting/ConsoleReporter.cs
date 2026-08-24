@@ -6,7 +6,10 @@ public static class ConsoleReporter
 {
     public static string Render(IReadOnlyList<ContractChange> changes) => Render(changes, null);
 
-    public static string Render(IReadOnlyList<ContractChange> changes, IReadOnlyList<AffectedConsumer>? impact)
+    public static string Render(IReadOnlyList<ContractChange> changes, IReadOnlyList<AffectedConsumer>? impact) =>
+        Render(changes, impact, null);
+
+    public static string Render(IReadOnlyList<ContractChange> changes, IReadOnlyList<AffectedConsumer>? impact, IReadOnlyList<ImpactChain>? chains)
     {
         var ordered = ComparisonOrdering.Apply(changes);
 
@@ -35,6 +38,9 @@ public static class ConsoleReporter
         if (impact is not null)
             lines.AddRange(RenderImpact(impact, ordered));
 
+        if (chains is { Count: > 0 })
+            lines.AddRange(RenderChains(chains));
+
         return string.Join(Environment.NewLine, lines);
     }
 
@@ -53,6 +59,20 @@ public static class ConsoleReporter
 
         foreach (var consumer in impact)
             yield return RenderAffected(consumer);
+    }
+
+    private static IEnumerable<string> RenderChains(IReadOnlyList<ImpactChain> chains)
+    {
+        yield return string.Empty;
+        yield return "Cadenas de impacto:";
+
+        foreach (var chain in chains)
+        {
+            yield return $"  {string.Join(" → ", chain.Services)} · confianza {(chain.Confidence == ConfidenceLevel.High ? "alta" : "media")}";
+
+            foreach (var trigger in chain.Triggers)
+                yield return $"      ↳ {trigger.RuleId} {trigger.Target}";
+        }
     }
 
     private static string RenderAffected(AffectedConsumer consumer) =>
