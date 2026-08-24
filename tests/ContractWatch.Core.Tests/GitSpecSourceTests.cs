@@ -7,10 +7,11 @@ public class GitSpecSourceTests
     [Fact]
     public async Task Resuelve_el_spec_de_un_ref_git_y_lo_carga_como_contrato()
     {
-        var contract = await GitSpecSource.LoadAsync("HEAD", "examples/v1.json");
+        var spec = await GitSpecSource.LoadAsync("HEAD", "examples/v1.json");
 
-        Assert.Equal(5, contract.Operations.Count);
-        Assert.Contains(contract.Operations, o => o.Path == "/orders" && o.Method == "POST");
+        Assert.Equal(5, spec.Contract.Operations.Count);
+        Assert.Contains(spec.Contract.Operations, o => o.Path == "/orders" && o.Method == "POST");
+        Assert.Equal(SpecKind.OpenApi, spec.Kind);
     }
 
     [Fact]

@@ -1,0 +1,90 @@
+{
+  "asyncapi": "2.6.0",
+  "info": {
+    "title": "Orders Events API",
+    "version": "2.0.0"
+  },
+  "channels": {
+    "orders/events": {
+      "subscribe": {
+        "operationId": "consumePaymentCommand",
+        "message": { "$ref": "#/components/messages/PaymentCommand" }
+      }
+    },
+    "payments/instructions": {
+      "subscribe": {
+        "operationId": "consumePaymentInstruction",
+        "message": { "$ref": "#/components/messages/PaymentInstruction" }
+      }
+    },
+    "shipments/status": {
+      "publish": {
+        "operationId": "publishShipmentStatus",
+        "message": { "$ref": "#/components/messages/ShipmentStatus" }
+      }
+    },
+    "users/signedup": {
+      "publish": {
+        "operationId": "publishUserSignedUp",
+        "message": { "$ref": "#/components/messages/UserSignedUp" }
+      }
+    },
+    "refunds/issued": {
+      "publish": {
+        "operationId": "publishRefundIssued",
+        "message": { "$ref": "#/components/messages/RefundIssued" }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "PaymentCommand": { "payload": { "$ref": "#/components/schemas/PaymentCommand" } },
+      "PaymentInstruction": { "payload": { "$ref": "#/components/schemas/PaymentInstruction" } },
+      "ShipmentStatus": { "payload": { "$ref": "#/components/schemas/ShipmentStatus" } },
+      "UserSignedUp": { "payload": { "$ref": "#/components/schemas/UserSignedUp" } },
+      "RefundIssued": { "payload": { "$ref": "#/components/schemas/RefundIssued" } }
+    },
+    "schemas": {
+      "PaymentCommand": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" }
+        }
+      },
+      "PaymentInstruction": {
+        "type": "object",
+        "required": ["paymentId", "method", "referenceId"],
+        "properties": {
+          "paymentId": { "type": "string" },
+          "method": { "type": "string", "enum": ["card"] },
+          "referenceId": { "type": "string" }
+        }
+      },
+      "ShipmentStatus": {
+        "type": "object",
+        "required": ["shipmentId", "state", "eta"],
+        "properties": {
+          "shipmentId": { "type": "string" },
+          "state": { "type": "string", "enum": ["pending", "shipped", "delivered", "cancelled"] },
+          "eta": { "type": "number" }
+        }
+      },
+      "UserSignedUp": {
+        "type": "object",
+        "required": ["userId"],
+        "properties": {
+          "userId": { "type": "string" },
+          "marketingOptIn": { "type": "boolean" }
+        }
+      },
+      "RefundIssued": {
+        "type": "object",
+        "required": ["refundId"],
+        "properties": {
+          "refundId": { "type": "string" }
+        }
+      }
+    }
+  }
+}

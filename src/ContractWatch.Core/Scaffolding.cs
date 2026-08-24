@@ -11,7 +11,7 @@ public static class ContractWatchInit
         Scaffold(directory, PolicyFile.DefaultFileName, """
             {
               // "failOn": "breaking" | "potentially" | "never"   ← umbral por defecto del gate
-              // "severityOverrides": { "CW010": "compatible" }     ← re-map por regla (CW001..CW018)
+              // "severityOverrides": { "CW010": "compatible" }     ← re-map por regla (CW001..CW027)
             }
             """, results);
 

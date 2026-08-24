@@ -1,0 +1,61 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "Billing Events API",
+    "version": "1.0.0"
+  },
+  "channels": {
+    "ordersEvents": {
+      "address": "orders/events",
+      "messages": {
+        "OrderCreated": { "$ref": "#/components/messages/OrderCreated" }
+      },
+      "operations": {
+        "sendOrderCreated": { "$ref": "#/components/operations/sendOrderCreated" }
+      }
+    },
+    "billingCommands": {
+      "address": "billing/commands",
+      "messages": {},
+      "operations": {
+        "receivePaymentCommand": { "$ref": "#/components/operations/receivePaymentCommand" }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "OrderCreated": { "payload": { "$ref": "#/components/schemas/OrderCreated" } },
+      "PaymentCommand": { "payload": { "$ref": "#/components/schemas/PaymentCommand" } }
+    },
+    "schemas": {
+      "OrderCreated": {
+        "type": "object",
+        "required": ["orderId"],
+        "properties": {
+          "orderId": { "type": "string" },
+          "total": { "type": "number" }
+        }
+      },
+      "PaymentCommand": {
+        "type": "object",
+        "required": ["id", "method"],
+        "properties": {
+          "id": { "type": "string" },
+          "method": { "type": "string", "enum": ["card", "transfer"] }
+        }
+      }
+    },
+    "operations": {
+      "sendOrderCreated": {
+        "action": "send",
+        "channel": { "$ref": "#/channels/ordersEvents" },
+        "messages": [{ "$ref": "#/components/messages/OrderCreated" }]
+      },
+      "receivePaymentCommand": {
+        "action": "receive",
+        "channel": { "$ref": "#/channels/billingCommands" },
+        "messages": [{ "$ref": "#/components/messages/PaymentCommand" }]
+      }
+    }
+  }
+}

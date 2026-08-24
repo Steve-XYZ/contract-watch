@@ -1,9 +1,10 @@
 # ContractWatch
 
-Detecta automáticamente cuándo un cambio en una API rompe consumidores. Compara dos contratos OpenAPI y clasifica cada cambio por su impacto real:
+Detecta automáticamente cuándo un cambio en una API rompe consumidores. Compara dos contratos OpenAPI o AsyncAPI y clasifica cada cambio por su impacto real:
 
 ```
 contractwatch compare main/openapi.json pr/openapi.json
+contractwatch compare main/asyncapi.json pr/asyncapi.json   # también soportado
 ```
 
 ```
@@ -81,4 +82,4 @@ Para actualizar a una nueva versión: `dotnet tool update -g --add-source <carpe
 
 ## Estado
 
-Fases 1–3 completas: CLI con las 18 reglas del catálogo (`compare` + `check --baseline`, formatos console/json/markdown/sarif, exit codes), GitHub Action con comentario idempotente en PRs y gate de CI con suppressions justificadas (`.contractwatchignore`). Fase 4 parcial: policies por repo (`.contractwatch.json` con `failOn` y `severityOverrides`) y salida SARIF (`--format sarif`). Fase 5 MVP: análisis de impacto declarativo (`consumers.json`) que responde *¿quién se rompe?* con confianza alta/media por consumidor. Historial local: `--save <dir>` guarda cada reporte como JSON con metadatos y `contractwatch history` lista/consulta lo guardado. Empaquetado como .NET global tool (`dotnet tool install contractwatch`, paquete autocontenido con versión única desde MSBuild) y release automático por tags `v*` que adjunta los nupkg a un GitHub Release; la publicación en NuGet.org queda pendiente. Sin BD ni grafo multi-API; los demás formatos de contrato quedan para después. Cada cambio reportado incluye una sugerencia determinista de remediación (`↳` en consola, columna/campo `suggestion` en markdown/json/sarif).
+Fases 1–3 completas: CLI con las 27 reglas del catálogo (`compare` + `check --baseline`, formatos console/json/markdown/sarif, exit codes), GitHub Action con comentario idempotente en PRs y gate de CI con suppressions justificadas (`.contractwatchignore`). Fase 4 completa: policies por repo (`.contractwatch.json` con `failOn` y `severityOverrides`), salida SARIF (`--format sarif`) y soporte AsyncAPI 2.x/3.x con auto-detección por documento y reglas propias para canales y mensajes (CW019–CW027). Fase 5 MVP: análisis de impacto declarativo (`consumers.json`) que responde *¿quién se rompe?* con confianza alta/media por consumidor. Historial local: `--save <dir>` guarda cada reporte como JSON con metadatos y `contractwatch history` lista/consulta lo guardado. Empaquetado como .NET global tool (`dotnet tool install contractwatch`, paquete autocontenido con versión única desde MSBuild) y release automático por tags `v*` que adjunta los nupkg a un GitHub Release; la publicación en NuGet.org queda pendiente. Sin BD ni grafo multi-API; los demás formatos de contrato quedan para después. Cada cambio reportado incluye una sugerencia determinista de remediación (`↳` en consola, columna/campo `suggestion` en markdown/json/sarif).

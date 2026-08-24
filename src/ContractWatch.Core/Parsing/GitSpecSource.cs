@@ -7,7 +7,7 @@ public sealed class GitSpecException(string gitRef, string path, string detail)
 
 public static class GitSpecSource
 {
-    public static async Task<ApiContract> LoadAsync(string gitRef, string repoRelativePath, CancellationToken cancellationToken = default)
+    public static async Task<LoadedSpec> LoadAsync(string gitRef, string repoRelativePath, CancellationToken cancellationToken = default)
     {
         var process = Process.Start(new ProcessStartInfo
         {
@@ -29,7 +29,7 @@ public static class GitSpecSource
         try
         {
             await File.WriteAllTextAsync(tempFile, standardOutput, cancellationToken);
-            return await OpenApiLoader.LoadAsync(tempFile, cancellationToken);
+            return await SpecLoader.LoadAsync(tempFile, cancellationToken);
         }
         finally
         {

@@ -24,6 +24,15 @@ public static class RemediationCatalog
         ["CW016"] = "Nothing is required to stay compatible; document the newly accepted values so consumers know they can start sending them.",
         ["CW017"] = "No technical action is needed for compatibility; document the new status as an expected response so consumers add the corresponding branch.",
         ["CW018"] = "No technical action is required for compatibility; regenerate or sync the affected documentation so it matches the contract.",
+        ["CW019"] = "Keep the channel alive during a deprecation period announced in the changelog before deleting it. If removal is final, document the replacement channel so consumers can migrate their subscriptions.",
+        ["CW020"] = "Keep the operation during a deprecation period announced in the changelog before removing it, and announce the date after which messages stop flowing for that action on the channel.",
+        ["CW021"] = "Introduce the property as optional with a server-side default and promote it to required only in a major version of the message schema. Alternatively publish a versioned message so existing senders keep the previous contract.",
+        ["CW022"] = "Accept both the old and the new type during a transition period (a tolerant parser or a union works well) and tighten to the new type in the next major release.",
+        ["CW023"] = "Keep publishing the property marked as deprecated, or send it empty/null while consumers migrate, and remove it entirely in a major release.",
+        ["CW024"] = "Widening cannot be avoided without breaking exhaustive consumers: announce the new case in the changelog and let consumers handle it before emitting it in production traffic.",
+        ["CW025"] = "Keep accepting the removed legacy values by ignoring or mapping them while senders migrate, and announce a deprecation date for rejecting them.",
+        ["CW026"] = "Nothing is required to stay compatible; announce the new channel in the changelog so consumers can start adopting it.",
+        ["CW027"] = "Nothing is required to stay compatible; document the new optional property in the changelog so consumers know they may receive it.",
     }.ToFrozenDictionary();
 
     public static string? For(string ruleId) =>

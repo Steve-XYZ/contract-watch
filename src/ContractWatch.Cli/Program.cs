@@ -172,11 +172,12 @@ compareCommand.SetAction(async (parseResult, cancellationToken) =>
 
     try
     {
-        var previous = await OpenApiLoader.LoadAsync(oldFile.FullName, cancellationToken);
-        var current = await OpenApiLoader.LoadAsync(newFile.FullName, cancellationToken);
-        return await ReportAndExit(previous, current, failOn, SarifReporter.NormalizeArtifactUri(newFile.FullName), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "compare", [oldFile.FullName, newFile.FullName], parseResult.GetValue(saveOption));
+        var previous = await SpecLoader.LoadAsync(oldFile.FullName, cancellationToken);
+        var current = await SpecLoader.LoadAsync(newFile.FullName, cancellationToken);
+        SpecLoader.EnsureSameKind(previous, current, oldFile.FullName, newFile.FullName);
+        return await ReportAndExit(previous.Contract, current.Contract, failOn, SarifReporter.NormalizeArtifactUri(newFile.FullName), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "compare", [oldFile.FullName, newFile.FullName], parseResult.GetValue(saveOption));
     }
-    catch (Exception ex) when (ex is ContractLoadException or IOException or UnauthorizedAccessException)
+    catch (Exception ex) when (ex is ContractLoadException or UnsupportedSpecException or MixedSpecKindsException or IOException or UnauthorizedAccessException)
     {
         Console.Error.WriteLine($"error: {ex.Message}");
         return 2;
@@ -211,10 +212,11 @@ checkCommand.SetAction(async (parseResult, cancellationToken) =>
     try
     {
         var baseline = await GitSpecSource.LoadAsync(gitRef, specPath, cancellationToken);
-        var current = await OpenApiLoader.LoadAsync(specPath, cancellationToken);
-        return await ReportAndExit(baseline, current, failOn, SarifReporter.NormalizeArtifactUri(Path.GetFullPath(specPath)), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "check", [gitRef, specPath], parseResult.GetValue(saveOption));
+        var current = await SpecLoader.LoadAsync(specPath, cancellationToken);
+        SpecLoader.EnsureSameKind(baseline, current, $"{gitRef}:{specPath}", specPath);
+        return await ReportAndExit(baseline.Contract, current.Contract, failOn, SarifReporter.NormalizeArtifactUri(Path.GetFullPath(specPath)), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "check", [gitRef, specPath], parseResult.GetValue(saveOption));
     }
-    catch (Exception ex) when (ex is GitSpecException or ContractLoadException or IOException or UnauthorizedAccessException)
+    catch (Exception ex) when (ex is GitSpecException or ContractLoadException or UnsupportedSpecException or MixedSpecKindsException or IOException or UnauthorizedAccessException)
     {
         Console.Error.WriteLine($"error: {ex.Message}");
         return 2;

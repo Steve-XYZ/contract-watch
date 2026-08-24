@@ -11,7 +11,7 @@ contractwatch compare <old.json> <new.json> [options]
 | Argumento/Opción | Tipo | Default | Descripción |
 |---|---|---|---|
 | `old` | path | — | contrato base (ej. `main/openapi.json`) |
-| `new` | path | — | contrato propuesto (ej. `PR/openapi.json`) |
+| `new` | path | — | contrato propuesto (ej. `PR/openapi.json`); el tipo (OpenAPI o AsyncAPI) se auto-detecta por contenido y debe coincidir en ambos |
 | `--format` | `console` \| `json` \| `markdown` \| `sarif` | `console` | formato del reporte |
 | `--fail-on` | `breaking` \| `potentially` \| `never` | `breaking` (o `.contractwatch.json`) | severidad mínima que produce exit code 1 |
 | `--save` | directorio | — | guarda el reporte como JSON en el historial local (ver [history](#history---historial-local-de-reportes)) |
@@ -22,7 +22,7 @@ contractwatch compare <old.json> <new.json> [options]
 |---|---|
 | `0` | Sin cambios con severidad >= umbral de `--fail-on` |
 | `1` | Hay cambios que superan el umbral (bloquea CI) |
-| `2` | Error: archivo inexistente, JSON inválido, documento que no es OpenAPI, `.contractwatch.json`, `.contractwatchignore` o `consumers.json` inválidos |
+| `2` | Error: archivo inexistente, JSON inválido, documento ilegible o de tipo distinto al otro (mezclar OpenAPI con AsyncAPI), `.contractwatch.json`, `.contractwatchignore` o `consumers.json` inválidos |
 
 Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el build: se muestran como advertencia.
 
@@ -47,7 +47,7 @@ Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el 
 3 breaking · 1 potentially breaking · 7 compatible
 ```
 
-Orden de reporte: `Breaking`, luego `PotentiallyBreaking`, luego `Compatible`; dentro de cada grupo por método y path. Bajo cada detalle puede aparecer una línea adicional `↳` con la sugerencia determinista de remediación para esa regla (CW001–CW018 tienen texto en el catálogo).
+Orden de reporte: `Breaking`, luego `PotentiallyBreaking`, luego `Compatible`; dentro de cada grupo por método y path. Bajo cada detalle puede aparecer una línea adicional `↳` con la sugerencia determinista de remediación para esa regla (CW001–CW027 tienen texto en el catálogo).
 
 ## Salida markdown
 
@@ -154,6 +154,7 @@ Errores van a stderr en texto plano; nada de JSON parcial ante fallo de parsing.
 
 ```
 contractwatch compare examples/v1.json examples/v2.json
+contractwatch compare examples/asyncapi-v1.json examples/asyncapi-v2.json
 contractwatch compare main/openapi.json pr/openapi.json --format json
 contractwatch compare old.json new.json --fail-on potentially   # CI estricto
 contractwatch compare main/openapi.json pr/openapi.json --format sarif > contractwatch.sarif
@@ -268,7 +269,7 @@ Ambos campos son opcionales.
 
 - `failOn`: umbral **por defecto** que aplica solo cuando el usuario NO pasa `--fail-on`. Precedencia: **flag > policy > default (`breaking`)**. Valores: `breaking|potentially|never`.
 - `severityOverrides`: re-mapea la severidad de TODOS los cambios de esa regla después de comparar y antes de suprimir/reportear. Valores: `breaking|potentially|compatible`. Útil para endurecer reglas potencialmente breaking o degradar a compatible las que tu consumers ya toleran.
-- Anti-typos: las claves de `severityOverrides` deben ser reglas del catálogo (CW001–CW018); una regla desconocida es error de parsing.
+- Anti-typos: las claves de `severityOverrides` deben ser reglas del catálogo (CW001–CW027); una regla desconocida es error de parsing.
 - Errores → exit 2 con mensaje claro: JSON malformado, `failOn` inválido, regla desconocida o severidad inválida.
 
 El re-mapeo ocurre antes de suppressions y del reporte: un cambio degradado a `compatible` deja de superar umbrales, se cuenta como compatible y no aparece en la salida SARIF.
