@@ -6,7 +6,10 @@ public static class MarkdownReporter
 {
     public static string Render(ComparisonResult result) => Render(result, null);
 
-    public static string Render(ComparisonResult result, IReadOnlyList<AffectedConsumer>? impact)
+    public static string Render(ComparisonResult result, IReadOnlyList<AffectedConsumer>? impact) =>
+        Render(result, impact, null);
+
+    public static string Render(ComparisonResult result, IReadOnlyList<AffectedConsumer>? impact, IReadOnlyList<ImpactChain>? chains)
     {
         var breaking = result.Count(ChangeSeverity.Breaking);
         var potentiallyBreaking = result.Count(ChangeSeverity.PotentiallyBreaking);
@@ -47,7 +50,25 @@ public static class MarkdownReporter
         if (impact is { Count: > 0 })
             lines.AddRange(RenderImpact(impact));
 
+        if (chains is { Count: > 0 })
+            lines.AddRange(RenderChains(chains));
+
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static IEnumerable<string> RenderChains(IReadOnlyList<ImpactChain> chains)
+    {
+        yield return string.Empty;
+        yield return "#### Impact chains";
+        yield return string.Empty;
+        yield return "| Chain | Confidence | Triggered by |";
+        yield return "|---|---|---|";
+
+        foreach (var chain in chains)
+        {
+            var triggers = string.Join("; ", chain.Triggers.Select(t => $"{t.RuleId} {t.Target}"));
+            yield return $"| `{Escape(string.Join(" → ", chain.Services))}` | {chain.Confidence} | {Escape(triggers)} |";
+        }
     }
 
     private static IEnumerable<string> RenderImpact(IReadOnlyList<AffectedConsumer> impact)

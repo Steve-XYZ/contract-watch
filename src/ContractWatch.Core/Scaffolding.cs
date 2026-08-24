@@ -23,7 +23,11 @@ public static class ContractWatchInit
 
         Scaffold(directory, ConsumerRegistryFile.DefaultFileName, """
             {
-              "consumers": []
+              // "service": "mi-api"                            ← nombre de esta API: completa la cabeza de las cadenas de impacto
+              "consumers": [
+                // { "service": "otro-servicio", "operations": ["GET /ruta"],
+                //   "spec": "../otro-servicio/openapi.json" }   ← declarar spec encadena el impacto a los consumidores de ese servicio
+              ]
             }
             """, results);
 

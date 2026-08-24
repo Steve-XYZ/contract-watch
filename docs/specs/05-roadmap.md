@@ -68,7 +68,7 @@ Registro declarativo de consumidores en `consumers.json` (auto-detectado, `--con
 
 La confianza es declarativa: **high** cuando la entrada fija método+path exactos, **medium** cuando solo declara path (cualquier método). Solo cuentan cambios breaking y potentially breaking, después de policies y suppressions; es informativo — no altera los exit codes. Ver [04-cli](04-cli.md#registro-de-consumidores-consumersjson).
 
-Sigue abierto para esta fase: grafo de propagación multi-API (una API que rompe a otra API encadena el impacto), base de datos durable de relaciones de consumo y confianza basada en telemetría real en lugar de declaraciones.
+El grafo de propagación multi-API está hecho ✅: un consumidor que declara `spec` encadena el impacto a través de su propio `consumers.json`, con confianza compuesta por el mínimo de sus saltos y ciclos rechazados con error (ver [04-cli](04-cli.md#grafos-de-impacto-multi-api)). Siguen abiertos para esta fase: base de datos durable de relaciones de consumo y confianza basada en telemetría real en lugar de declaraciones.
 
 ## Exploratorio
 

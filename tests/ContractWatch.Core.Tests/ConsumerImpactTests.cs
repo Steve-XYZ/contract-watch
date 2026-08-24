@@ -261,4 +261,86 @@ public class ConsumerImpactTests
 
         Assert.DoesNotContain("affectedConsumers", json);
     }
+
+    [Fact]
+    public void Console_agrega_cadenas_de_impacto_con_el_disparador_por_salto()
+    {
+        var impact = new List<AffectedConsumer> { new("admin-web", ConfidenceLevel.High, 1), new("orders-api", ConfidenceLevel.High, 1) };
+        var chains = new List<ImpactChain>
+        {
+            new(["player-api", "orders-api", "admin-web"], ConfidenceLevel.High, [new ChainTrigger("CW004", "POST /bets")]),
+        };
+
+        var output = ConsoleReporter.Render([Change("CW004", ChangeSeverity.Breaking, "/bets", "POST")], impact, chains);
+
+        Assert.EndsWith($"""
+            Consumidores afectados:
+              admin-web · confianza alta · 1 cambio(s)
+              orders-api · confianza alta · 1 cambio(s)
+
+            Cadenas de impacto:
+              player-api → orders-api → admin-web · confianza alta
+                  ↳ CW004 POST /bets
+            """, output);
+    }
+
+    [Fact]
+    public void Console_sin_cadenas_no_agrega_la_seccion()
+    {
+        var impact = new List<AffectedConsumer> { new("admin-web", ConfidenceLevel.High, 1) };
+
+        var withNull = ConsoleReporter.Render([], impact);
+        var withEmpty = ConsoleReporter.Render([], impact, []);
+
+        Assert.DoesNotContain("Cadenas de impacto", withNull);
+        Assert.Equal(withNull, withEmpty);
+    }
+
+    [Fact]
+    public void Markdown_incluye_tabla_de_cadenas_con_disparadores()
+    {
+        var result = new ComparisonResult([Change("CW004", ChangeSeverity.Breaking, "/bets", "POST")]);
+        var chains = new List<ImpactChain>
+        {
+            new(["player-api", "orders-api", "admin-web"], ConfidenceLevel.Medium, [new ChainTrigger("CW004", "POST /bets"), new ChainTrigger("CW001", "/legacy")]),
+        };
+
+        var markdown = MarkdownReporter.Render(result, [], chains);
+
+        Assert.Contains("#### Impact chains", markdown);
+        Assert.Contains("| Chain | Confidence | Triggered by |", markdown);
+        Assert.Contains("| `player-api → orders-api → admin-web` | Medium | CW004 POST /bets; CW001 /legacy |", markdown);
+    }
+
+    [Fact]
+    public void Json_incluye_affectedChains_cuando_hay_cadenas_y_las_preserva_en_meta()
+    {
+        var result = new ComparisonResult([Change("CW004", ChangeSeverity.Breaking, "/bets", "POST")]);
+        var chains = new List<ImpactChain>
+        {
+            new(["player-api", "orders-api"], ConfidenceLevel.High, [new ChainTrigger("CW004", "POST /bets")]),
+        };
+        var meta = new ReportMeta("2026-08-24T10:00:00Z", "compare", ["old.json", "new.json"]);
+
+        var json = JsonReporter.Render(result, null, chains, meta);
+
+        Assert.Contains("\"affectedChains\": [", json);
+        Assert.Contains("\"services\": [", json);
+        Assert.Contains("\"confidence\": \"High\"", json);
+        Assert.Contains("\"ruleId\": \"CW004\"", json);
+        Assert.Contains("\"target\": \"POST /bets\"", json);
+        Assert.Contains("\"meta\":", json);
+    }
+
+    [Fact]
+    public void Json_sin_cadenas_omite_affectedChains()
+    {
+        var result = new ComparisonResult([Change("CW004", ChangeSeverity.Breaking, "/orders", "POST")]);
+        var impact = new List<AffectedConsumer> { new("admin-web", ConfidenceLevel.High, 1) };
+
+        var json = JsonReporter.Render(result, impact, null, null);
+
+        Assert.Contains("affectedConsumers", json);
+        Assert.DoesNotContain("affectedChains", json);
+    }
 }

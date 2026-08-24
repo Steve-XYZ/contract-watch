@@ -22,7 +22,7 @@ contractwatch compare <old.json> <new.json> [options]
 |---|---|
 | `0` | Sin cambios con severidad >= umbral de `--fail-on` |
 | `1` | Hay cambios que superan el umbral (bloquea CI) |
-| `2` | Error: archivo inexistente, JSON inválido, documento que no es OpenAPI, `.contractwatch.json`, `.contractwatchignore` o `consumers.json` inválidos |
+| `2` | Error: archivo inexistente, JSON inválido, documento que no es OpenAPI, `.contractwatch.json`, `.contractwatchignore` o `consumers.json` inválidos (incluidos los archivos anidados vía `spec` y los ciclos entre ellos) |
 
 Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el build: se muestran como advertencia.
 
@@ -288,6 +288,43 @@ Archivo por repo, auto-detectado en el directorio de trabajo para `compare` y `c
 
 Cada operación es `"METHOD /path"` o `"/path"` (también vale `"* /path"`). El análisis de impacto cruza los cambios del diff con esas declaraciones y responde la pregunta de la Fase 5: *¿quién se rompe?*
 
+### Grafos de impacto multi-API
+
+Un consumidor puede ser a su vez una API con consumidores propios: el impacto se propaga en cadena. Cada entrada admite un campo opcional `spec` con la ruta al contrato OpenAPI que publica ese servicio; ContractWatch busca automáticamente un `consumers.json` en ese mismo directorio y repite el análisis con él, recursivamente. El archivo raíz admite además un campo opcional `service` que nombra la API dueña del registro y completa la cabeza de cada cadena:
+
+```json
+{
+  "service": "player-api",
+  "consumers": [
+    { "service": "admin-web", "operations": ["GET /players/{id}"] },
+    { "service": "orders-api", "operations": ["POST /bets"], "spec": "../orders-api/openapi.json" }
+  ]
+}
+```
+
+Un cambio que rompe `POST /bets` reporta entonces:
+
+```
+Consumidores afectados:
+  admin-web · confianza alta · 1 cambio(s)
+  checkout-web · confianza alta · 1 cambio(s)
+  orders-api · confianza alta · 1 cambio(s)
+  audit-log · confianza media · 1 cambio(s)
+
+Cadenas de impacto:
+  player-api → orders-api → checkout-web · confianza alta
+      ↳ CW004 POST /bets
+  player-api → orders-api → audit-log · confianza media
+      ↳ CW004 POST /bets
+```
+
+- Las rutas se resuelven relativas al directorio del archivo que las declara; las absolutas también valen. Los archivos anidados usan exactamente el mismo schema: el encadenamiento es recursivo por construcción.
+- Si un consumidor directamente afectado declara `spec`, todos sus consumidores declarados quedan potencialmente impactados: la API intermedia tiene que adaptarse o puede fallar mientras tanto, y eso alcanza a quien la llama.
+- Cada salto anota el cambio que disparó la cascada (`↳ CW004 POST /bets`): es siempre un cambio del diff raíz, después de policies y suppressions.
+- La confianza se compone de forma conservadora: cada salto aporta la de su declaración según la tabla siguiente y una cadena toma el **mínimo** de sus saltos — un solo eslabón débil limita toda la cadena. En la lista plana, un servicio alcanzable por varias cadenas aparece una sola vez, con la máxima confianza entre ellas y los cambios disparadores acumulados sin duplicar.
+- Solo se listan cadenas de dos o más servicios; el impacto directo vive en la lista plana de siempre. En markdown la sección es `#### Impact chains`; en JSON, el arreglo `affectedChains` (se omite cuando no hay cadenas). SARIF no cambia.
+- Errores → exit 2: `spec` inexistente, `consumers.json` ausente junto a un spec declarado, ciclo de consumidores (`ciclo de consumidores detectado: player-api → orders-api → player-api`) o cualquier archivo anidado inválido bajo las mismas reglas de validación.
+
 ### Semántica de confianza
 
 | Entrada | Coincidencia | Confianza |
@@ -306,7 +343,7 @@ El impacto se calcula **después** de aplicar `.contractwatch.json` (severityOve
 
 ### El exit code no se ve afectado
 
-El análisis es informativo: no agrega ni quita severidad al diff. Los exit codes siguen saliendo exclusivamente del umbral de `--fail-on` sobre los cambios post-supresión. Errores del archivo (JSON malformado, servicio vacío o duplicado, consumidor sin operaciones, entrada que no es `METHOD /path` ni `/path`) → exit 2.
+El análisis es informativo: no agrega ni quita severidad al diff. Los exit codes siguen saliendo exclusivamente del umbral de `--fail-on` sobre los cambios post-supresión. Errores del archivo (JSON malformado, servicio vacío o duplicado, consumidor sin operaciones, entrada que no es `METHOD /path` ni `/path`, `spec` roto, ciclo) → exit 2.
 
 ## Decisiones
 
