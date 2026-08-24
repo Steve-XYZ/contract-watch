@@ -12,6 +12,8 @@ public static class ContractWatchInit
             {
               // "failOn": "breaking" | "potentially" | "never"   ← umbral por defecto del gate
               // "severityOverrides": { "CW010": "compatible" }     ← re-map por regla (CW001..CW018)
+              // "explain": "fake" | "openai"                       ← explicaciones con IA (off por defecto)
+              // "explainModel": "gpt-4o-mini"                      ← modelo del proveedor
             }
             """, results);
 

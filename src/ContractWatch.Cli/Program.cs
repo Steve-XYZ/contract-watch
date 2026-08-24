@@ -2,6 +2,7 @@
 using System.Globalization;
 using ContractWatch.Core;
 using ContractWatch.Core.Comparison;
+using ContractWatch.Core.Explanations;
 using ContractWatch.Core.Parsing;
 using ContractWatch.Core.Reporting;
 
@@ -10,6 +11,8 @@ var failOnOption = new Option<string?>("--fail-on") { DefaultValueFactory = _ =>
 var suppressFileOption = new Option<string?>("--suppress-file");
 var consumersOption = new Option<string?>("--consumers");
 var saveOption = new Option<string?>("--save");
+var explainOption = new Option<string?>("--explain");
+var explainModelOption = new Option<string?>("--explain-model");
 
 var oldArgument = new Argument<FileInfo>("old");
 var newArgument = new Argument<FileInfo>("new");
@@ -24,6 +27,8 @@ compareCommand.Add(failOnOption);
 compareCommand.Add(suppressFileOption);
 compareCommand.Add(consumersOption);
 compareCommand.Add(saveOption);
+compareCommand.Add(explainOption);
+compareCommand.Add(explainModelOption);
 
 var checkCommand = new Command("check", "Compara el contrato del árbol de trabajo contra el spec en un ref de git (gate de CI)");
 checkCommand.Add(baselineOption);
@@ -33,6 +38,8 @@ checkCommand.Add(failOnOption);
 checkCommand.Add(suppressFileOption);
 checkCommand.Add(consumersOption);
 checkCommand.Add(saveOption);
+checkCommand.Add(explainOption);
+checkCommand.Add(explainModelOption);
 
 var initCommand = new Command("init", "Crea los archivos de configuración (.contractwatch.json, .contractwatchignore, consumers.json) sin sobreescribir los existentes");
 
@@ -61,7 +68,15 @@ string? ValidateFailOn(string? failOn)
     return $"--fail-on desconocido '{failOn}' (breaking|potentially|never)";
 }
 
-async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string? failOn, string artifactUri, string format, string? suppressFile, string? consumersFile, string commandKind, IReadOnlyList<string> inputs, string? saveDirectory)
+string? ValidateExplain(string? explain)
+{
+    if (explain is null || ExplanationProviders.Known.Contains(explain))
+        return null;
+
+    return $"--explain desconocido '{explain}' (fake|openai)";
+}
+
+async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string? failOn, string artifactUri, string format, string? suppressFile, string? consumersFile, string commandKind, IReadOnlyList<string> inputs, string? saveDirectory, string? explainFlag, string? explainModelFlag, CancellationToken cancellationToken)
 {
     var original = new ContractComparer().Compare(previous, current);
 
@@ -99,6 +114,29 @@ async Task<int> ReportAndExit(ApiContract previous, ApiContract current, string?
     {
         Console.Error.WriteLine($"error: {ex.Message}");
         return 2;
+    }
+
+    if (ExplanationOptions.Resolve(explainFlag, policy.Explain, explainModelFlag, policy.ExplainModel) is { } settings)
+    {
+        IExplanationProvider provider;
+
+        try
+        {
+            provider = ExplanationProviderFactory.Create(settings);
+        }
+        catch (ExplanationConfigurationException ex)
+        {
+            Console.Error.WriteLine($"error: {ex.Message}");
+            return 2;
+        }
+
+        var outcome = await ExplanationEnricher.EnrichAsync(result, provider, cancellationToken);
+
+        if (outcome.Failures > 0)
+            Console.Error.WriteLine(
+                $"aviso: la explicación con IA ({settings.Provider}) falló para {outcome.Failures} hallazgo(s): {outcome.FirstFailureReason}; se mantiene la sugerencia determinista");
+
+        result = outcome.Result;
     }
 
     var impact = ImpactAnalyzer.Analyze(result, registry);
@@ -155,6 +193,14 @@ compareCommand.SetAction(async (parseResult, cancellationToken) =>
         return 2;
     }
 
+    var explain = parseResult.GetValue(explainOption);
+
+    if (ValidateExplain(explain) is { } explainError)
+    {
+        Console.Error.WriteLine($"error: {explainError}");
+        return 2;
+    }
+
     var oldFile = parseResult.GetValue(oldArgument)!;
     var newFile = parseResult.GetValue(newArgument)!;
 
@@ -174,7 +220,7 @@ compareCommand.SetAction(async (parseResult, cancellationToken) =>
     {
         var previous = await OpenApiLoader.LoadAsync(oldFile.FullName, cancellationToken);
         var current = await OpenApiLoader.LoadAsync(newFile.FullName, cancellationToken);
-        return await ReportAndExit(previous, current, failOn, SarifReporter.NormalizeArtifactUri(newFile.FullName), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "compare", [oldFile.FullName, newFile.FullName], parseResult.GetValue(saveOption));
+        return await ReportAndExit(previous, current, failOn, SarifReporter.NormalizeArtifactUri(newFile.FullName), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "compare", [oldFile.FullName, newFile.FullName], parseResult.GetValue(saveOption), explain, parseResult.GetValue(explainModelOption), cancellationToken);
     }
     catch (Exception ex) when (ex is ContractLoadException or IOException or UnauthorizedAccessException)
     {
@@ -205,6 +251,14 @@ checkCommand.SetAction(async (parseResult, cancellationToken) =>
         return 2;
     }
 
+    var explain = parseResult.GetValue(explainOption);
+
+    if (ValidateExplain(explain) is { } explainError)
+    {
+        Console.Error.WriteLine($"error: {explainError}");
+        return 2;
+    }
+
     var gitRef = parseResult.GetValue(baselineOption)!;
     var specPath = parseResult.GetValue(specArgument)!.Replace('\\', '/');
 
@@ -212,7 +266,7 @@ checkCommand.SetAction(async (parseResult, cancellationToken) =>
     {
         var baseline = await GitSpecSource.LoadAsync(gitRef, specPath, cancellationToken);
         var current = await OpenApiLoader.LoadAsync(specPath, cancellationToken);
-        return await ReportAndExit(baseline, current, failOn, SarifReporter.NormalizeArtifactUri(Path.GetFullPath(specPath)), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "check", [gitRef, specPath], parseResult.GetValue(saveOption));
+        return await ReportAndExit(baseline, current, failOn, SarifReporter.NormalizeArtifactUri(Path.GetFullPath(specPath)), format, parseResult.GetValue(suppressFileOption), parseResult.GetValue(consumersOption), "check", [gitRef, specPath], parseResult.GetValue(saveOption), explain, parseResult.GetValue(explainModelOption), cancellationToken);
     }
     catch (Exception ex) when (ex is GitSpecException or ContractLoadException or IOException or UnauthorizedAccessException)
     {

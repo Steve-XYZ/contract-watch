@@ -15,6 +15,10 @@ contractwatch compare <old.json> <new.json> [options]
 | `--format` | `console` \| `json` \| `markdown` \| `sarif` | `console` | formato del reporte |
 | `--fail-on` | `breaking` \| `potentially` \| `never` | `breaking` (o `.contractwatch.json`) | severidad mínima que produce exit code 1 |
 | `--save` | directorio | — | guarda el reporte como JSON en el historial local (ver [history](#history---historial-local-de-reportes)) |
+| `--explain` | `fake` \| `openai` | desactivado (o `.contractwatch.json`) | activa las explicaciones con IA por proveedor (ver [explicaciones con IA](#explicaciones-con-ia-opcional)) |
+| `--explain-model` | string | default del proveedor | modelo que usa el proveedor de explicaciones |
+
+`check` comparte `--format`, `--fail-on`, `--save`, `--explain` y `--explain-model`.
 
 ## Exit codes
 
@@ -22,7 +26,7 @@ contractwatch compare <old.json> <new.json> [options]
 |---|---|
 | `0` | Sin cambios con severidad >= umbral de `--fail-on` |
 | `1` | Hay cambios que superan el umbral (bloquea CI) |
-| `2` | Error: archivo inexistente, JSON inválido, documento que no es OpenAPI, `.contractwatch.json`, `.contractwatchignore` o `consumers.json` inválidos |
+| `2` | Error: archivo inexistente, JSON inválido, documento que no es OpenAPI, `.contractwatch.json`, `.contractwatchignore` o `consumers.json` inválidos; proveedor de explicaciones desconocido o activo sin `CONTRACTWATCH_AI_KEY` |
 
 Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el build: se muestran como advertencia.
 
@@ -47,7 +51,7 @@ Con el default `--fail-on breaking`, cambios `PotentiallyBreaking` no fallan el 
 3 breaking · 1 potentially breaking · 7 compatible
 ```
 
-Orden de reporte: `Breaking`, luego `PotentiallyBreaking`, luego `Compatible`; dentro de cada grupo por método y path. Bajo cada detalle puede aparecer una línea adicional `↳` con la sugerencia determinista de remediación para esa regla (CW001–CW018 tienen texto en el catálogo).
+Orden de reporte: `Breaking`, luego `PotentiallyBreaking`, luego `Compatible`; dentro de cada grupo por método y path. Bajo cada detalle puede aparecer una línea adicional `↳` con la sugerencia determinista de remediación para esa regla (CW001–CW018 tienen texto en el catálogo) y, con `--explain` activo, una segunda `↳ IA:` con la explicación del proveedor (multi-línea se aplasta en una sola).
 
 ## Salida markdown
 
@@ -90,13 +94,14 @@ This PR introduces **6 breaking** contract changes.
       "message": "Required request property added: customerId",
       "oldValue": null,
       "newValue": "customerId",
-      "suggestion": "Introduce the property as optional with a default value and promote it to required only in a major version."
+      "suggestion": "Introduce the property as optional with a default value and promote it to required only in a major version.",
+      "explanation": null
     }
   ]
 }
 ```
 
-El campo `suggestion` lleva la remediación determinista de la regla y puede ser `null` (igual que `oldValue`/`newValue`).
+El campo `suggestion` lleva la remediación determinista de la regla y puede ser `null` (igual que `oldValue`/`newValue`). El campo `explanation` lleva la explicación del proveedor de IA y es `null` cuando `--explain` no está activo o el proveedor falló para ese hallazgo.
 
 Errores van a stderr en texto plano; nada de JSON parcial ante fallo de parsing.
 
@@ -106,7 +111,7 @@ Errores van a stderr en texto plano; nada de JSON parcial ante fallo de parsing.
 
 - Solo incluye cambios `Breaking` (level `error`) y `PotentiallyBreaking` (level `warning`); los compatibles se excluyen porque SARIF reporta problemas.
 - Cada result lleva `ruleId`, `ruleIndex` (índice en `tool.driver.rules`), `message.text` y `locations[0].physicalLocation.artifactLocation.uri` con la ruta del spec evaluado.
-- `properties` preserva la clasificación de ContractWatch: `severity`, `path`, `method` y la `suggestion` de remediación (puede ser `null`).
+- `properties` preserva la clasificación de ContractWatch: `severity`, `path`, `method`, la `suggestion` de remediación (puede ser `null`) y la `explanation` del proveedor de IA (`null` sin `--explain`).
 
 ```json
 {
@@ -158,6 +163,8 @@ contractwatch compare main/openapi.json pr/openapi.json --format json
 contractwatch compare old.json new.json --fail-on potentially   # CI estricto
 contractwatch compare main/openapi.json pr/openapi.json --format sarif > contractwatch.sarif
 contractwatch compare old.json new.json --save reports          # guarda en el historial local
+contractwatch compare old.json new.json --explain fake          # explicación determinista sin red
+CONTRACTWATCH_AI_KEY=... contractwatch compare old.json new.json --explain openai
 ```
 
 ## check — gate de CI
@@ -166,7 +173,7 @@ contractwatch compare old.json new.json --save reports          # guarda en el h
 contractwatch check --baseline <git-ref> <spec-path> [options]
 ```
 
-Resuelve la versión base del spec vía `git show <ref>:<spec-path>` (sin checkout) y la compara contra el archivo del árbol de trabajo, en la misma ruta relativa. Comparte `--format`, `--fail-on`, `--save`, suppressions y policies con `compare`; mismos exit codes. Fallos de git (ref inexistente, archivo ausente en el ref) → exit 2.
+Resuelve la versión base del spec vía `git show <ref>:<spec-path>` (sin checkout) y la compara contra el archivo del árbol de trabajo, en la misma ruta relativa. Comparte `--format`, `--fail-on`, `--save`, `--explain`, `--explain-model`, suppressions y policies con `compare`; mismos exit codes. Fallos de git (ref inexistente, archivo ausente en el ref) → exit 2.
 
 ```
 contractwatch check --baseline origin/main openapi.json
@@ -268,10 +275,37 @@ Ambos campos son opcionales.
 
 - `failOn`: umbral **por defecto** que aplica solo cuando el usuario NO pasa `--fail-on`. Precedencia: **flag > policy > default (`breaking`)**. Valores: `breaking|potentially|never`.
 - `severityOverrides`: re-mapea la severidad de TODOS los cambios de esa regla después de comparar y antes de suprimir/reportear. Valores: `breaking|potentially|compatible`. Útil para endurecer reglas potencialmente breaking o degradar a compatible las que tu consumers ya toleran.
-- Anti-typos: las claves de `severityOverrides` deben ser reglas del catálogo (CW001–CW018); una regla desconocida es error de parsing.
+- `explain` y `explainModel`: activación por defecto del proveedor de explicaciones con IA (ver [explicaciones con IA](#explicaciones-con-ia-opcional)). Precedencia **flag > policy > desactivado**; `explain` acepta `fake|openai`, un valor desconocido es error de parsing.
+- Anti-typos: las claves de `severityOverrides` deben ser reglas del catálogo (CW001–CW018); una regla desconocida es error de parsing. Lo mismo aplica a `explain`.
 - Errores → exit 2 con mensaje claro: JSON malformado, `failOn` inválido, regla desconocida o severidad inválida.
 
 El re-mapeo ocurre antes de suppressions y del reporte: un cambio degradado a `compatible` deja de superar umbrales, se cuenta como compatible y no aparece en la salida SARIF.
+
+## Explicaciones con IA (opcional)
+
+Capa opcional sobre la sugerencia determinista: un proveedor explica cada hallazgo (por qué rompe y el paso mínimo de migración). **Desactivado por defecto**; sin `--explain` la salida de los cuatro formatos es exactamente la de siempre.
+
+```json
+{
+  "failOn": "potentially",
+  "explain": "openai",
+  "explainModel": "gpt-4o-mini"
+}
+```
+
+- Activación: flag (`--explain fake|openai`) o policy (`.contractwatch.json`, claves `explain` y `explainModel`). Precedencia: **flag > policy > desactivado**. Anti-typos igual que el resto: un proveedor desconocido es error de parsing (exit 2).
+- Proveedores:
+  - `fake`: determinista, sin red, eco del hallazgo con formato `[fake] <ruleId> (<regla>) at <METHOD> <path>: <mensaje>.`. Para pruebas, demos y CI.
+  - `openai`: llamada HTTP directa a chat-completions (sin SDK), modelo configurable (`--explain-model` / `explainModel`, default `gpt-4o-mini`). Compatible con cualquier endpoint OpenAI-style vía la variable `CONTRACTWATCH_AI_BASE_URL`.
+- Claves SOLO por entorno: `CONTRACTWATCH_AI_KEY`. Nunca se loguea, nunca se persiste en reportes ni en el historial. Si el proveedor está activo pero la variable falta → error claro + exit 2.
+- Degradación por hallazgo: si la API falla (red, status no exitoso, payload inesperado) ese hallazgo conserva solo la sugerencia determinista y se emite UN aviso agregado en stderr al final del enriquecimiento. El exit code no cambia por fallos del proveedor.
+- Salida: la explicación viaja junto a `suggestion` — línea `↳ IA:` en consola, columna `AI` en markdown (solo cuando hay explicaciones), campo `explanation` en json y `properties.explanation` en sarif.
+- El texto de IA SÍ se embebe en los reportes guardados con `--save` (es contenido del reporte); lo que jamás viaja es material sensible.
+
+```
+contractwatch compare old.json new.json --explain fake
+CONTRACTWATCH_AI_KEY=... contractwatch compare old.json new.json --explain openai --explain-model gpt-4o-mini
+```
 
 ## Registro de consumidores (`consumers.json`)
 

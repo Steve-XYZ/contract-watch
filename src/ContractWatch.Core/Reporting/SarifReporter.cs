@@ -58,7 +58,10 @@ public static class SarifReporter
             ["path"] = change.Location.Path,
             ["method"] = change.Location.Method,
             ["suggestion"] = change.Suggestion,
+            ["explanation"] = Flatten(change.Explanation),
         });
+
+    private static string? Flatten(string? text) => text?.ReplaceLineEndings(" ");
 
     private sealed record SarifLog(
         [property: JsonPropertyName("$schema")] string Schema,

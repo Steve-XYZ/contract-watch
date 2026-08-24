@@ -19,6 +19,9 @@ public static class ConsoleReporter
 
             if (change.Suggestion is { } suggestion)
                 lines.Add($"    ↳ {suggestion}");
+
+            if (change.Explanation is { } explanation)
+                lines.Add($"    ↳ IA: {Flatten(explanation)}");
         }
 
         if (ordered.Count > 0)
@@ -70,6 +73,8 @@ public static class ConsoleReporter
 
     private static string RenderDetail(ContractChange change) =>
         $"  {change.Message}".PadRight(53) + $" [{change.RuleId}]";
+
+    private static string Flatten(string text) => text.ReplaceLineEndings(" ");
 
     private static string RenderSummary(List<ContractChange> changes)
     {

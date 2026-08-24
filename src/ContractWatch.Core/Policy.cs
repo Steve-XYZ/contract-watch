@@ -1,11 +1,16 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ContractWatch.Core.Comparison;
+using ContractWatch.Core.Explanations;
 using ContractWatch.Core.Rules;
 
 namespace ContractWatch.Core;
 
-public sealed record ContractPolicy(string? FailOn, IReadOnlyDictionary<string, ChangeSeverity> SeverityOverrides);
+public sealed record ContractPolicy(
+    string? FailOn,
+    IReadOnlyDictionary<string, ChangeSeverity> SeverityOverrides,
+    string? Explain = null,
+    string? ExplainModel = null);
 
 public sealed class PolicyFileException : Exception
 {
@@ -52,8 +57,9 @@ public static class PolicyFile
 
         var failOn = ValidateFailOn(path, dto.FailOn);
         var overrides = ValidateOverrides(path, dto.SeverityOverrides);
+        var explain = ValidateExplain(path, dto.Explain);
 
-        return new ContractPolicy(failOn, overrides);
+        return new ContractPolicy(failOn, overrides, explain, dto.ExplainModel);
     }
 
     public static ChangeSeverity? ResolveThreshold(string? flagValue, string? policyFailOn)
@@ -90,6 +96,14 @@ public static class PolicyFile
         throw new PolicyFileException(path, $"failOn desconocido '{failOn}' (breaking|potentially|never)");
     }
 
+    private static string? ValidateExplain(string path, string? explain)
+    {
+        if (explain is null || ExplanationProviders.Known.Contains(explain))
+            return explain;
+
+        throw new PolicyFileException(path, $"explain desconocido '{explain}' (fake|openai)");
+    }
+
     private static IReadOnlyDictionary<string, ChangeSeverity> ValidateOverrides(string path, Dictionary<string, string>? overrides)
     {
         if (overrides is null || overrides.Count == 0)
@@ -116,5 +130,5 @@ public static class PolicyFile
         return severities;
     }
 
-    private sealed record PolicyDto(string? FailOn, Dictionary<string, string>? SeverityOverrides);
+    private sealed record PolicyDto(string? FailOn, Dictionary<string, string>? SeverityOverrides, string? Explain, string? ExplainModel);
 }

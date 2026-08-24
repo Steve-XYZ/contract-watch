@@ -63,6 +63,36 @@ public class PolicyFileTests : IDisposable
     }
 
     [Fact]
+    public void Parse_explain_con_modelo()
+    {
+        var policy = PolicyFile.Load(Write("""{ "explain": "openai", "explainModel": "gpt-4o-mini" }"""));
+
+        Assert.Equal("openai", policy.Explain);
+        Assert.Equal("gpt-4o-mini", policy.ExplainModel);
+    }
+
+    [Fact]
+    public void Explain_ausente_deja_null()
+    {
+        var policy = PolicyFile.Load(Write("""{ "failOn": "potentially" }"""));
+
+        Assert.Null(policy.Explain);
+        Assert.Null(policy.ExplainModel);
+    }
+
+    [Fact]
+    public void Explain_desconocido_lanza_error_para_proteger_typos()
+    {
+        var path = Write("""{ "explain": "chatgpt" }""");
+
+        var exception = Assert.Throws<PolicyFileException>(() => PolicyFile.Load(path));
+
+        Assert.Contains(path, exception.Message);
+        Assert.Contains("explain", exception.Message);
+        Assert.Contains("chatgpt", exception.Message);
+    }
+
+    [Fact]
     public void failOn_invalido_lanza_error_con_la_ruta()
     {
         var path = Write("""{ "failOn": "a veces" }""");

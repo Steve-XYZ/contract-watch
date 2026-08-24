@@ -74,7 +74,7 @@ Sigue abierto para esta fase: grafo de propagación multi-API (una API que rompe
 
 - Version history: evolución de compatibilidad de una API a lo largo del tiempo — parcial ✅: historial local por archivos (`--save` en `compare`/`check` guarda cada reporte con sobre `meta`; `contractwatch history` lista y consulta, ver [04-cli](04-cli.md#history---historial-local-de-reportes)); tendencias/gráficos y multi-repo quedan abiertos.
 - Dashboard de contratos y sus consumidores.
-- AI explanation de cada breaking change y sugerencia del cambio mínimo compatible — parcial ✅: los textos deterministas de remedio por regla (CW001–CW018) ya viajan en los cuatro reportes (`↳` en consola, columna/campo `suggestion`); la explicación con IA sigue abierta.
+- AI explanation de cada breaking change y sugerencia del cambio mínimo compatible — parcial ✅: los textos deterministas de remedio por regla (CW001–CW018) ya viajan en los cuatro reportes (`↳` en consola, columna/campo `suggestion`), y encima existe una capa opcional de explicación con IA detrás de un proveedor enchufable (`IExplanationProvider`): `fake` determinista sin red para pruebas y `openai` vía HTTP directo a chat-completions (sin SDK, cero dependencias nuevas). Desactivado por defecto; se activa con `--explain fake|openai` o `.contractwatch.json`, la clave viaja solo por entorno (`CONTRACTWATCH_AI_KEY`) y nunca se persiste; si la API falla, el hallazgo degrada a la sugerencia determinista con un aviso único. Ver [04-cli](04-cli.md#explicaciones-con-ia-opcional). Queda abierto: proveedores adicionales (Anthropic-style, locales) y caché de explicaciones.
 
 ## No hacer
 

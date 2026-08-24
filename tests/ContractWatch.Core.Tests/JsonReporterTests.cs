@@ -75,4 +75,29 @@ public class JsonReporterTests
         Assert.Contains("optional with a default", entries[0].GetProperty("suggestion").GetString());
         Assert.Equal(JsonValueKind.Null, entries[1].GetProperty("suggestion").ValueKind);
     }
+
+    [Fact]
+    public void La_explicacion_se_serializa_junto_a_la_sugerencia_y_puede_ser_null()
+    {
+        var changes = new List<ContractChange>
+        {
+            new("CW004", "RequiredPropertyAdded", ChangeSeverity.Breaking,
+                new ChangeLocation("/orders", "POST"), "Required request property added: currency",
+                Suggestion: "Introduce the property as optional with a default value.",
+                Explanation: "[fake] CW004 at POST /orders."),
+            new("CW015", "OptionalPropertyAdded", ChangeSeverity.Compatible,
+                new ChangeLocation("/orders", "POST"), "Optional property added: metadata"),
+        };
+        var result = new ComparisonResult(changes);
+
+        var json = JsonReporter.Render(result);
+        using var document = JsonDocument.Parse(json);
+
+        var entries = document.RootElement.GetProperty("changes");
+        Assert.Equal("[fake] CW004 at POST /orders.", entries[0].GetProperty("explanation").GetString());
+        Assert.Equal(JsonValueKind.Null, entries[1].GetProperty("explanation").ValueKind);
+
+        var order = entries[0].EnumerateObject().Select(p => p.Name).ToList();
+        Assert.True(order.IndexOf("suggestion") < order.IndexOf("explanation"));
+    }
 }

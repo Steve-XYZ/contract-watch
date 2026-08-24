@@ -59,7 +59,8 @@ public static class JsonReporter
         change.Message,
         change.OldValue,
         change.NewValue,
-        change.Suggestion);
+        change.Suggestion,
+        change.Explanation);
 
     private sealed record Report(
         string Tool,
@@ -81,7 +82,8 @@ public static class JsonReporter
         string Message,
         string? OldValue,
         string? NewValue,
-        string? Suggestion);
+        string? Suggestion,
+        string? Explanation);
 
     private sealed record Location(string Path, string? Method, string? JsonPointer);
 }

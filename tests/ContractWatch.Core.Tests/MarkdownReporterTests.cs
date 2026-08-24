@@ -95,4 +95,55 @@ public class MarkdownReporterTests
         Assert.Contains("`GET /x\\|y`", markdown);
         Assert.Contains("a\\|b → c", markdown);
     }
+
+    [Fact]
+    public void Con_explicaciones_aparece_la_columna_ai()
+    {
+        var result = new ComparisonResult(
+        [
+            new("CW004", "RequiredPropertyAdded", ChangeSeverity.Breaking,
+                new ChangeLocation("/orders", "POST"), "Required request property added: currency",
+                Suggestion: "Introduce the property as optional.",
+                Explanation: "[fake] CW004 breaks POST /orders."),
+            new("CW015", "OptionalPropertyAdded", ChangeSeverity.Compatible,
+                new ChangeLocation("/orders", "POST"), "Optional property added: metadata"),
+        ]);
+
+        var markdown = MarkdownReporter.Render(result);
+
+        Assert.Contains("| Severity | Operation | Change | Rule | Suggestion | AI |", markdown);
+        Assert.Contains("| ✗ Breaking | `POST /orders` | Required request property added: currency | CW004 | Introduce the property as optional. | [fake] CW004 breaks POST /orders. |", markdown);
+        Assert.Contains("| ✓ Compatible | `POST /orders` | Optional property added: metadata | CW015 |  |  |", markdown);
+    }
+
+    [Fact]
+    public void Sin_explicaciones_la_tabla_mantiene_cinco_columnas()
+    {
+        var result = new ComparisonResult(
+        [
+            new("CW004", "RequiredPropertyAdded", ChangeSeverity.Breaking,
+                new ChangeLocation("/orders", "POST"), "Required request property added: currency",
+                Explanation: null),
+        ]);
+
+        var markdown = MarkdownReporter.Render(result);
+
+        Assert.DoesNotContain("| AI |", markdown);
+        Assert.Contains("| Severity | Operation | Change | Rule | Suggestion |", markdown);
+    }
+
+    [Fact]
+    public void La_explicacion_se_escapa_y_se_aplasta_en_la_columna_ai()
+    {
+        var result = new ComparisonResult(
+        [
+            new("CW008", "ResponsePropertyTypeChanged", ChangeSeverity.Breaking,
+                new ChangeLocation("/x", "GET"), "Response property changed: a → b",
+                Explanation: "linea a|b\nlinea c"),
+        ]);
+
+        var markdown = MarkdownReporter.Render(result);
+
+        Assert.Contains("| linea a\\|b linea c |", markdown);
+    }
 }
