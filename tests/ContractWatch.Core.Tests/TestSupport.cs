@@ -36,6 +36,9 @@ internal static class TestContracts
     public static ApiParameter Parameter(string name, string @in, bool required) =>
         new(name, @in, required, null);
 
+    public static ApiMessageOperation MessageOperation(string channel, string action, MessageDirection direction, ApiSchema? payload = null) =>
+        new(channel, action, direction, payload);
+
     public static ApiResponse Response(string statusCode) => new(statusCode, null);
 
     public static ApiSchema ObjectSchema(string[]? required = null, params (string Name, ApiSchema Schema)[] properties) => new(

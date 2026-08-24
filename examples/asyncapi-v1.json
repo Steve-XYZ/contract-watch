@@ -1,0 +1,101 @@
+{
+  "asyncapi": "2.6.0",
+  "info": {
+    "title": "Orders Events API",
+    "version": "1.0.0"
+  },
+  "channels": {
+    "legacy/audit": {
+      "publish": {
+        "operationId": "publishAuditEvent",
+        "message": { "$ref": "#/components/messages/AuditEvent" }
+      }
+    },
+    "orders/events": {
+      "publish": {
+        "operationId": "publishOrderPlaced",
+        "message": { "$ref": "#/components/messages/OrderPlaced" }
+      },
+      "subscribe": {
+        "operationId": "consumePaymentCommand",
+        "message": { "$ref": "#/components/messages/PaymentCommand" }
+      }
+    },
+    "payments/instructions": {
+      "subscribe": {
+        "operationId": "consumePaymentInstruction",
+        "message": { "$ref": "#/components/messages/PaymentInstruction" }
+      }
+    },
+    "shipments/status": {
+      "publish": {
+        "operationId": "publishShipmentStatus",
+        "message": { "$ref": "#/components/messages/ShipmentStatus" }
+      }
+    },
+    "users/signedup": {
+      "publish": {
+        "operationId": "publishUserSignedUp",
+        "message": { "$ref": "#/components/messages/UserSignedUp" }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "AuditEvent": { "payload": { "$ref": "#/components/schemas/AuditEvent" } },
+      "OrderPlaced": { "payload": { "$ref": "#/components/schemas/OrderPlaced" } },
+      "PaymentCommand": { "payload": { "$ref": "#/components/schemas/PaymentCommand" } },
+      "PaymentInstruction": { "payload": { "$ref": "#/components/schemas/PaymentInstruction" } },
+      "ShipmentStatus": { "payload": { "$ref": "#/components/schemas/ShipmentStatus" } },
+      "UserSignedUp": { "payload": { "$ref": "#/components/schemas/UserSignedUp" } }
+    },
+    "schemas": {
+      "AuditEvent": {
+        "type": "object",
+        "required": ["event"],
+        "properties": {
+          "event": { "type": "string" }
+        }
+      },
+      "OrderPlaced": {
+        "type": "object",
+        "required": ["orderId"],
+        "properties": {
+          "orderId": { "type": "string" }
+        }
+      },
+      "PaymentCommand": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" }
+        }
+      },
+      "PaymentInstruction": {
+        "type": "object",
+        "required": ["paymentId", "method"],
+        "properties": {
+          "paymentId": { "type": "string" },
+          "method": { "type": "string", "enum": ["card", "transfer"] }
+        }
+      },
+      "ShipmentStatus": {
+        "type": "object",
+        "required": ["shipmentId", "state", "eta"],
+        "properties": {
+          "shipmentId": { "type": "string" },
+          "state": { "type": "string", "enum": ["pending", "shipped", "delivered"] },
+          "eta": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserSignedUp": {
+        "type": "object",
+        "required": ["userId", "email"],
+        "properties": {
+          "userId": { "type": "string" },
+          "email": { "type": "string" }
+        }
+      }
+    }
+  }
+}

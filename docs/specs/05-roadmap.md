@@ -40,12 +40,12 @@ contractwatch check --baseline origin/main <spec>
 
 Implementado: `check` resuelve el spec de la rama base vía `git show` (sin checkout intermedio) y aplica los exit codes del CLI. Suppressions en `.contractwatchignore` con formato `<ruleId> <path> [<method>] :: <razón>` — la justificación es obligatoria y el archivo se auto-detecta; la revisabilidad vive en el diff del PR que lo introduce.
 
-## Fase 4 — Políticas y formatos (parcial ✅)
+## Fase 4 — Políticas y formatos ✅
 
-- Compatibility policies por repo ✅: `.contractwatch.json` auto-detectado, con `failOn` por defecto (precedencia flag > policy > default breaking) y `severityOverrides` que re-mapean severidades por regla después de comparar y antes de suprimir/reportear; validación anti-typos contra el catálogo (CW001–CW018), errores → exit 2. Ver [04-cli](04-cli.md#policies-contractwatchjson).
+- Compatibility policies por repo ✅: `.contractwatch.json` auto-detectado, con `failOn` por defecto (precedencia flag > policy > default breaking) y `severityOverrides` que re-mapean severidades por regla después de comparar y antes de suprimir/reportear; validación anti-typos contra el catálogo (CW001–CW027), errores → exit 2. Ver [04-cli](04-cli.md#policies-contractwatchjson).
 - SARIF output ✅: `--format sarif` emite SARIF 2.1.0 con levels error/warning para subir a GitHub code scanning y mostrar hallazgos inline en el PR.
+- AsyncAPI ✅: comparación de documentos 2.x y 3.x (JSON) con auto-detección del tipo de cada documento por contenido; nueve reglas propias (CW019–CW027) sobre canales, acciones (`publish`/`subscribe`, `send`/`receive`) y payloads de mensajes, con la misma asimetría input/output que OpenAPI. Mezclar formatos en una comparación es error; el catálogo sigue siendo único, así que policies, suppressions y los cuatro formatos de salida funcionan sin cambios. Ver [03-reglas](03-reglas.md#asyncapi-cw019cw027).
 - Otros formatos de contrato quedan abiertos según demanda real, uno a la vez:
-  - AsyncAPI
   - GraphQL schema compatibility
   - protobuf/gRPC
   - JSON Schema genérico

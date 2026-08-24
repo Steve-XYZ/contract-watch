@@ -13,4 +13,18 @@ public sealed record ApiOperation(
     string? Summary = null,
     string? Description = null);
 
-public sealed record ApiContract(IReadOnlyList<ApiOperation> Operations);
+public enum MessageDirection
+{
+    Outbound,
+    Inbound,
+}
+
+public sealed record ApiMessageOperation(
+    string Channel,
+    string Action,
+    MessageDirection Direction,
+    ApiSchema? PayloadSchema);
+
+public sealed record ApiContract(
+    IReadOnlyList<ApiOperation> Operations,
+    IReadOnlyList<ApiMessageOperation>? MessageOperations = null);

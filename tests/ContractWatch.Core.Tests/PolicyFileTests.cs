@@ -84,6 +84,15 @@ public class PolicyFileTests : IDisposable
     }
 
     [Fact]
+    public void Las_reglas_de_AsyncAPI_son_validas_en_overrides()
+    {
+        var policy = PolicyFile.Load(Write("""{ "severityOverrides": { "CW019": "compatible", "CW027": "breaking" } }"""));
+
+        Assert.Equal(ChangeSeverity.Compatible, policy.SeverityOverrides["CW019"]);
+        Assert.Equal(ChangeSeverity.Breaking, policy.SeverityOverrides["CW027"]);
+    }
+
+    [Fact]
     public void Severidad_invalida_en_overrides_lanza_error()
     {
         var path = Write("""{ "severityOverrides": { "CW010": "optional" } }""");

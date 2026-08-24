@@ -63,6 +63,45 @@ Un cliente con un `switch` exhaustivo sobre esos valores no maneja `PENDING`. Pa
 | CW017 | ResponseStatusAdded | output | se documenta un 404 que antes no existía |
 | CW018 | MetadataOnlyChanged | ambos | cambian summaries, descriptions, tags o examples |
 
+## AsyncAPI (CW019–CW027)
+
+El catálogo es único para todos los formatos: la numeración continúa tras las reglas HTTP y `severityOverrides` y suppressions validan contra el mismo rango (`CW001..CW027`). El tipo de cada documento se auto-detecta por contenido: si la raíz tiene campo `asyncapi` (2.x y 3.x, en JSON) se trata como AsyncAPI; mezclar un OpenAPI con un AsyncAPI en una misma comparación es error de carga (exit 2).
+
+Cada canal con una operación se normaliza igual que un endpoint HTTP: el canal hace de path y la acción de método (`PUBLISH`/`SUBSCRIBE` en 2.x, `SEND`/`RECEIVE` en 3.x). La dirección respeta la asimetría general del catálogo:
+
+- **Outbound** (`publish`/`send`) — mensajes que el dueño del contrato emite hacia los consumidores; semántica de *output*: quitar propiedades rompe a quien lee, ampliar enums puede romper consumidores exhaustivos.
+- **Inbound** (`subscribe`/`receive`) — mensajes que el dueño consume de quienes producen; semántica de *input*: endurecer el payload rompe a quien envía.
+
+### Breaking
+
+| RuleId | Regla | Dirección | Ejemplo |
+|---|---|---|---|
+| CW019 | ChannelRemoved | — | desaparece el canal `legacy/audit` |
+| CW020 | ChannelOperationRemoved | — | `orders/events` pierde su operación `publish` (el canal sigue vivo vía `subscribe`) |
+| CW021 | MessageRequiredPropertyAdded | inbound | el payload consumido exige `referenceId` nuevo |
+| CW022 | MessagePropertyTypeChanged | ambas | `eta: string → number` en el payload publicado |
+| CW023 | MessagePropertyRemoved | outbound | ya no se publica `email` en `users/signedup` |
+| CW025 | MessageEnumNarrowed | inbound | `["card","transfer"] → ["card"]` en un mensaje consumido |
+
+### Potentially breaking
+
+| RuleId | Regla | Dirección | Ejemplo |
+|---|---|---|---|
+| CW024 | MessageEnumWidened | outbound | `["pending","shipped","delivered"] → [+ "cancelled"]`: el switch exhaustivo del consumidor no maneja el caso nuevo |
+
+### Compatible
+
+| RuleId | Regla | Dirección | Ejemplo |
+|---|---|---|---|
+| CW026 | ChannelAdded | — | nuevo canal `refunds/issued` |
+| CW027 | MessageOptionalPropertyAdded | outbound | `marketingOptIn` opcional en el payload publicado |
+
+### Límites explícitos
+
+- Solo documentos JSON: un AsyncAPI en YAML se rechaza con un error que lo indica.
+- Mensajes compuestos (`oneOf`) y operaciones v3 con varios mensajes: se compara el primer miembro.
+- `$ref` solo locales al documento (`#/...`); referencias externas son error.
+
 ## Asimetrías que las reglas deben respetar
 
 El mismo cambio físico tiene veredictos opuestos según dirección:

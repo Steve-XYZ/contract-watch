@@ -22,5 +22,14 @@ public static class RuleCatalog
         new RequestEnumWidened(),
         new ResponseStatusAdded(),
         new MetadataOnlyChanged(),
+        new ChannelRemoved(),
+        new ChannelOperationRemoved(),
+        new MessageRequiredPropertyAdded(),
+        new MessagePropertyTypeChanged(),
+        new MessagePropertyRemoved(),
+        new MessageEnumWidened(),
+        new MessageEnumNarrowed(),
+        new ChannelAdded(),
+        new MessageOptionalPropertyAdded(),
     ];
 }
